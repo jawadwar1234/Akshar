@@ -17,6 +17,14 @@ class DocumentRepositoryImpl @Inject constructor(
         return documentDao.getDocumentsForProfile(profileId)
     }
 
+    override fun getFavoriteDocuments(profileId: String): Flow<List<DocumentEntity>> {
+        return documentDao.getFavoriteDocuments(profileId)
+    }
+
+    override fun getDocumentsBySubject(profileId: String, subject: String): Flow<List<DocumentEntity>> {
+        return documentDao.getDocumentsBySubject(profileId, subject)
+    }
+
     override suspend fun getDocumentById(documentId: String): DocumentEntity? {
         return documentDao.getDocumentById(documentId)
     }
@@ -33,16 +41,28 @@ class DocumentRepositoryImpl @Inject constructor(
         documentDao.insertDocument(document)
     }
 
+    override suspend fun renameDocument(documentId: String, newTitle: String) {
+        documentDao.renameDocument(documentId, newTitle)
+    }
+
+    override suspend fun toggleFavorite(documentId: String, isFavorite: Boolean) {
+        documentDao.toggleFavorite(documentId, isFavorite)
+    }
+
+    override suspend fun updateTags(documentId: String, tags: String) {
+        documentDao.updateTags(documentId, tags)
+    }
+
     override suspend fun updateProgress(documentId: String, progressPercent: Int, lastReadWordIndex: Int) {
-        val doc = documentDao.getDocumentById(documentId)
-        if (doc != null) {
-            val updated = doc.copy(
-                readingProgressPercent = progressPercent,
-                lastReadWordIndex = lastReadWordIndex,
-                updatedAt = System.currentTimeMillis()
-            )
-            documentDao.updateDocument(updated)
-        }
+        documentDao.updateReadingProgress(documentId, progressPercent, lastReadWordIndex)
+    }
+
+    override suspend fun softDeleteDocument(documentId: String) {
+        documentDao.softDeleteDocument(documentId)
+    }
+
+    override suspend fun restoreDocument(documentId: String) {
+        documentDao.restoreDocument(documentId)
     }
 
     override suspend fun deleteDocument(documentId: String) {
@@ -56,6 +76,8 @@ class DocumentRepositoryImpl @Inject constructor(
             builder.append("  {\n")
             builder.append("    \"id\": \"${doc.id}\",\n")
             builder.append("    \"title\": \"${doc.title.replace("\"", "\\\"")}\",\n")
+            builder.append("    \"subject\": \"${doc.subject}\",\n")
+            builder.append("    \"tags\": \"${doc.tags}\",\n")
             builder.append("    \"script\": \"${doc.detectedScript}\",\n")
             builder.append("    \"wordCount\": ${doc.wordCount},\n")
             builder.append("    \"progressPercent\": ${doc.readingProgressPercent},\n")
@@ -72,7 +94,7 @@ class DocumentRepositoryImpl @Inject constructor(
         builder.append("===================================================\n\n")
         docs.forEachIndexed { index, doc ->
             builder.append("DOCUMENT ${index + 1}: ${doc.title}\n")
-            builder.append("Script: ${doc.detectedScript} | Words: ${doc.wordCount} | Progress: ${doc.readingProgressPercent}%\n")
+            builder.append("Subject: ${doc.subject} | Tags: ${doc.tags} | Script: ${doc.detectedScript} | Words: ${doc.wordCount} | Progress: ${doc.readingProgressPercent}%\n")
             builder.append("---------------------------------------------------\n")
             builder.append(doc.cleanText)
             builder.append("\n\n===================================================\n\n")

@@ -17,10 +17,23 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
+enum class LibraryTab {
+    RECENT,
+    FAVORITES,
+    SUBJECTS
+}
+
 data class LibraryUiState(
     val searchQuery: String = "",
+    val activeTab: LibraryTab = LibraryTab.RECENT,
+    val selectedSubject: String? = null,
+    val selectedTagFilter: String? = null,
     val selectedScriptFilter: String? = null,
-    val documentToDelete: DocumentEntity? = null
+    val documentToRename: DocumentEntity? = null,
+    val documentToEditTags: DocumentEntity? = null,
+    val documentToDelete: DocumentEntity? = null,
+    val recentlyDeletedDocumentId: String? = null,
+    val snackbarMessage: String? = null
 )
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -44,17 +57,43 @@ class LibraryViewModel @Inject constructor(
         }
         .combine(_uiState) { docs, state ->
             docs.filter { doc ->
+                // Tab Filter
+                val matchesTab = when (state.activeTab) {
+                    LibraryTab.RECENT -> true
+                    LibraryTab.FAVORITES -> doc.isFavorite
+                    LibraryTab.SUBJECTS -> state.selectedSubject == null || doc.subject.equals(state.selectedSubject, ignoreCase = true)
+                }
+
+                // Search Query Filter
                 val matchesQuery = state.searchQuery.isBlank() ||
                     doc.title.contains(state.searchQuery, ignoreCase = true) ||
-                    doc.cleanText.contains(state.searchQuery, ignoreCase = true)
+                    doc.cleanText.contains(state.searchQuery, ignoreCase = true) ||
+                    doc.tags.contains(state.searchQuery, ignoreCase = true)
 
+                // Script Filter
                 val matchesScript = state.selectedScriptFilter == null ||
                     doc.detectedScript.equals(state.selectedScriptFilter, ignoreCase = true)
 
-                matchesQuery && matchesScript
+                // Tag Filter
+                val matchesTag = state.selectedTagFilter == null ||
+                    doc.tags.split(",").map { it.trim() }.contains(state.selectedTagFilter)
+
+                matchesTab && matchesQuery && matchesScript && matchesTag
             }
         }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    fun onTabSelected(tab: LibraryTab) {
+        _uiState.value = _uiState.value.copy(activeTab = tab)
+    }
+
+    fun onSubjectSelected(subject: String?) {
+        _uiState.value = _uiState.value.copy(selectedSubject = subject)
+    }
+
+    fun onTagFilterSelected(tag: String?) {
+        _uiState.value = _uiState.value.copy(selectedTagFilter = tag)
+    }
 
     fun onSearchQueryChange(query: String) {
         _uiState.value = _uiState.value.copy(searchQuery = query)
@@ -62,6 +101,46 @@ class LibraryViewModel @Inject constructor(
 
     fun onScriptFilterSelected(script: String?) {
         _uiState.value = _uiState.value.copy(selectedScriptFilter = script)
+    }
+
+    fun toggleFavorite(document: DocumentEntity) {
+        viewModelScope.launch {
+            documentRepository.toggleFavorite(document.id, !document.isFavorite)
+        }
+    }
+
+    fun requestRenameDocument(document: DocumentEntity) {
+        _uiState.value = _uiState.value.copy(documentToRename = document)
+    }
+
+    fun dismissRenameDialog() {
+        _uiState.value = _uiState.value.copy(documentToRename = null)
+    }
+
+    fun confirmRenameDocument(newTitle: String) {
+        val doc = _uiState.value.documentToRename ?: return
+        if (newTitle.isNotBlank()) {
+            viewModelScope.launch {
+                documentRepository.renameDocument(doc.id, newTitle.trim())
+                _uiState.value = _uiState.value.copy(documentToRename = null)
+            }
+        }
+    }
+
+    fun requestEditTags(document: DocumentEntity) {
+        _uiState.value = _uiState.value.copy(documentToEditTags = document)
+    }
+
+    fun dismissEditTagsDialog() {
+        _uiState.value = _uiState.value.copy(documentToEditTags = null)
+    }
+
+    fun confirmEditTags(newTags: String) {
+        val doc = _uiState.value.documentToEditTags ?: return
+        viewModelScope.launch {
+            documentRepository.updateTags(doc.id, newTags.trim())
+            _uiState.value = _uiState.value.copy(documentToEditTags = null)
+        }
     }
 
     fun requestDeleteDocument(document: DocumentEntity) {
@@ -72,11 +151,30 @@ class LibraryViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(documentToDelete = null)
     }
 
-    fun confirmDeleteDocument() {
+    fun confirmSoftDeleteDocument() {
         val doc = _uiState.value.documentToDelete ?: return
         viewModelScope.launch {
-            documentRepository.deleteDocument(doc.id)
-            _uiState.value = _uiState.value.copy(documentToDelete = null)
+            documentRepository.softDeleteDocument(doc.id)
+            _uiState.value = _uiState.value.copy(
+                documentToDelete = null,
+                recentlyDeletedDocumentId = doc.id,
+                snackbarMessage = "\"${doc.title}\" deleted"
+            )
         }
+    }
+
+    fun undoDelete() {
+        val docId = _uiState.value.recentlyDeletedDocumentId ?: return
+        viewModelScope.launch {
+            documentRepository.restoreDocument(docId)
+            _uiState.value = _uiState.value.copy(
+                recentlyDeletedDocumentId = null,
+                snackbarMessage = "Restored lesson"
+            )
+        }
+    }
+
+    fun clearSnackbar() {
+        _uiState.value = _uiState.value.copy(snackbarMessage = null)
     }
 }

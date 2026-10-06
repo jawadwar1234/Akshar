@@ -56,16 +56,30 @@ class ReaderViewModel @Inject constructor(
             val doc = documentRepository.getDocumentById(documentId)
             if (doc != null) {
                 val parsed = UnicodeIndicTextUtil.parseReaderText(doc.cleanText)
+                // Determine last reading sentence index from stored lastReadWordIndex
+                val initialSentenceIndex = if (doc.lastReadWordIndex > 0 && parsed.sentences.isNotEmpty()) {
+                    val foundIdx = parsed.sentences.indexOfFirst { sentence ->
+                        sentence.words.any { it.startIndex >= doc.lastReadWordIndex }
+                    }
+                    if (foundIdx != -1) foundIdx else 0
+                } else {
+                    0
+                }
+
                 _uiState.value = _uiState.value.copy(
                     document = doc,
                     parsedText = parsed,
-                    editableDraftText = doc.cleanText
+                    editableDraftText = doc.cleanText,
+                    activeSentenceIndex = initialSentenceIndex
                 )
 
                 // Prepare TTS with sentences and offsets
                 val sentences = parsed.sentences.map { it.sentence }
                 val offsets = parsed.sentences.map { it.startIndex }
                 ttsManager.prepareText(sentences, offsets, parsed.script)
+                if (initialSentenceIndex > 0) {
+                    ttsManager.jumpToSentence(initialSentenceIndex)
+                }
             }
         }
     }
