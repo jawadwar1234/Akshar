@@ -1,5 +1,7 @@
 package com.akshar.dyslexiareader.ui.reader
 
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -20,24 +23,28 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
-import androidx.compose.material.icons.filled.FormatSize
+import androidx.compose.material.icons.filled.Compare
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Fullscreen
+import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.LinearScale
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
 import androidx.compose.material.icons.filled.SkipPrevious
-import androidx.compose.material.icons.filled.Stop
-import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
@@ -47,13 +54,16 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.RectangleShape
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
@@ -62,6 +72,7 @@ import androidx.compose.ui.unit.sp
 import com.akshar.dyslexiareader.R
 import com.akshar.dyslexiareader.domain.model.SentenceSpan
 import com.akshar.dyslexiareader.domain.model.SupportedScript
+import com.akshar.dyslexiareader.domain.model.UserSettings
 import com.akshar.dyslexiareader.domain.model.WordSpan
 import com.akshar.dyslexiareader.domain.util.PhonicsSyllableUtil
 import com.akshar.dyslexiareader.ui.theme.CalmTeal
@@ -72,6 +83,7 @@ import com.akshar.dyslexiareader.ui.theme.DyslexiaFontOption
 import com.akshar.dyslexiareader.ui.theme.LocalReaderTheme
 import com.akshar.dyslexiareader.ui.theme.ReaderThemePreset
 import com.akshar.dyslexiareader.ui.theme.TerracottaAccent
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -93,118 +105,222 @@ fun ReaderScreen(
     CompositionLocalProvider(LocalReaderTheme provides theme) {
         Scaffold(
             topBar = {
-                TopAppBar(
-                    title = {
-                        Text(
-                            text = uiState.document?.title ?: stringResource(R.string.reader_title),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.Bold,
-                            color = theme.textPrimary,
-                            maxLines = 1
-                        )
-                    },
-                    navigationIcon = {
-                        IconButton(onClick = {
-                            viewModel.stopTts()
-                            onNavigateBack()
-                        }) {
-                            Icon(
-                                imageVector = Icons.Default.ArrowBack,
-                                contentDescription = stringResource(R.string.action_back),
-                                tint = theme.textPrimary
-                            )
-                        }
-                    },
-                    actions = {
-                        // Reading Ruler Toggle with visible label
-                        OutlinedButton(
-                            onClick = viewModel::toggleRuler,
-                            shape = MaterialTheme.shapes.medium,
-                            modifier = Modifier.padding(end = DesignTokens.Spacing.xs)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.LinearScale,
-                                contentDescription = null,
-                                tint = if (uiState.isRulerActive) TerracottaAccent else theme.textPrimary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Spacer(modifier = Modifier.width(DesignTokens.Spacing.xs))
+                if (!uiState.isFullScreen) {
+                    TopAppBar(
+                        title = {
                             Text(
-                                text = stringResource(R.string.reader_btn_ruler),
-                                style = MaterialTheme.typography.labelMedium,
-                                color = if (uiState.isRulerActive) TerracottaAccent else theme.textPrimary
+                                text = uiState.document?.title ?: stringResource(R.string.reader_title),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                color = theme.textPrimary,
+                                maxLines = 1
                             )
-                        }
+                        },
+                        navigationIcon = {
+                            IconButton(onClick = {
+                                viewModel.stopTts()
+                                onNavigateBack()
+                            }) {
+                                Icon(
+                                    imageVector = Icons.Default.ArrowBack,
+                                    contentDescription = stringResource(R.string.action_back),
+                                    tint = theme.textPrimary
+                                )
+                            }
+                        },
+                        actions = {
+                            // Before/After Photo Toggle
+                            IconButton(onClick = viewModel::toggleBeforeAfterSplit) {
+                                Icon(
+                                    imageVector = Icons.Default.Compare,
+                                    contentDescription = "Compare original photo",
+                                    tint = if (uiState.isBeforeAfterSplit) TerracottaAccent else theme.textPrimary
+                                )
+                            }
 
-                        // Text Settings
-                        IconButton(onClick = viewModel::openTextSettings) {
-                            Icon(
-                                imageVector = Icons.Default.Settings,
-                                contentDescription = stringResource(R.string.reader_btn_appearance),
-                                tint = theme.textPrimary
-                            )
-                        }
-                    },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = theme.background)
-                )
+                            // Edit Mode Toggle
+                            IconButton(onClick = viewModel::toggleEditMode) {
+                                Icon(
+                                    imageVector = if (uiState.isEditMode) Icons.Default.Save else Icons.Default.Edit,
+                                    contentDescription = if (uiState.isEditMode) "Save text edits" else "Edit text",
+                                    tint = if (uiState.isEditMode) TerracottaAccent else theme.textPrimary
+                                )
+                            }
+
+                            // Reading Ruler Toggle
+                            OutlinedButton(
+                                onClick = viewModel::toggleRuler,
+                                shape = MaterialTheme.shapes.medium,
+                                modifier = Modifier.padding(end = DesignTokens.Spacing.xs)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.LinearScale,
+                                    contentDescription = null,
+                                    tint = if (uiState.isRulerActive) TerracottaAccent else theme.textPrimary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(DesignTokens.Spacing.xs))
+                                Text(
+                                    text = stringResource(R.string.reader_btn_ruler),
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = if (uiState.isRulerActive) TerracottaAccent else theme.textPrimary
+                                )
+                            }
+
+                            // Full-screen Toggle
+                            IconButton(onClick = viewModel::toggleFullScreen) {
+                                Icon(
+                                    imageVector = Icons.Default.Fullscreen,
+                                    contentDescription = "Full-screen mode",
+                                    tint = theme.textPrimary
+                                )
+                            }
+
+                            // Appearance Settings
+                            IconButton(onClick = viewModel::openTextSettings) {
+                                Icon(
+                                    imageVector = Icons.Default.Settings,
+                                    contentDescription = stringResource(R.string.reader_btn_appearance),
+                                    tint = theme.textPrimary
+                                )
+                            }
+                        },
+                        colors = TopAppBarDefaults.topAppBarColors(containerColor = theme.background)
+                    )
+                }
             },
             bottomBar = {
-                // Read-Aloud Bottom Control Bar
-                ReaderBottomBar(
-                    ttsState = ttsState,
-                    theme = theme,
-                    onPlay = viewModel::playTts,
-                    onPause = viewModel::pauseTts,
-                    onStop = viewModel::stopTts,
-                    onPrev = viewModel::prevSentence,
-                    onNext = viewModel::nextSentence
-                )
+                if (!uiState.isFullScreen && !uiState.isEditMode) {
+                    // Read-Aloud Bottom Control Bar
+                    ReaderBottomBar(
+                        ttsState = ttsState,
+                        theme = theme,
+                        onPlay = viewModel::playTts,
+                        onPause = viewModel::pauseTts,
+                        onStop = viewModel::stopTts,
+                        onPrev = viewModel::prevSentence,
+                        onNext = viewModel::nextSentence
+                    )
+                }
             },
             containerColor = theme.background
         ) { padding ->
             Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(padding)
+                    .padding(
+                        start = 0.dp,
+                        top = if (uiState.isFullScreen) 0.dp else padding.calculateTopPadding(),
+                        end = 0.dp,
+                        bottom = if (uiState.isFullScreen) 0.dp else padding.calculateBottomPadding()
+                    )
                     .background(theme.background)
             ) {
-                // Reading Canvas
-                val parsed = uiState.parsedText
-                val fontOption = DyslexiaFontOption.fromId(userSettings.fontFamily)
+                if (uiState.isEditMode) {
+                    // Edit Mode view
+                    EditModeCanvas(
+                        draftText = uiState.editableDraftText,
+                        onTextChange = viewModel::updateDraftText,
+                        onSave = viewModel::saveEditedText,
+                        onCancel = viewModel::toggleEditMode,
+                        theme = theme
+                    )
+                } else if (uiState.isBeforeAfterSplit && uiState.document?.imagePath != null) {
+                    // Before / After side-by-side view
+                    Row(modifier = Modifier.fillMaxSize()) {
+                        // Original Photo Side
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .background(Color.Black.copy(alpha = 0.05f))
+                                .border(1.dp, theme.borderColor),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val imageFile = remember(uiState.document?.imagePath) {
+                                File(uiState.document!!.imagePath!!)
+                            }
+                            if (imageFile.exists()) {
+                                val bitmap = remember(imageFile) {
+                                    BitmapFactory.decodeFile(imageFile.absolutePath)
+                                }
+                                if (bitmap != null) {
+                                    Image(
+                                        bitmap = bitmap.asImageBitmap(),
+                                        contentDescription = "Original textbook page photo",
+                                        contentScale = ContentScale.Fit,
+                                        modifier = Modifier.fillMaxSize().padding(DesignTokens.Spacing.xs)
+                                    )
+                                }
+                            }
+                        }
 
-                if (parsed != null) {
-                    LazyColumn(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .padding(horizontal = DesignTokens.Spacing.lg, vertical = DesignTokens.Spacing.md)
-                    ) {
-                        itemsIndexed(parsed.sentences) { sIdx, sentenceSpan ->
-                            val isSentenceActive = ttsState.isPlaying && ttsState.currentSentenceIndex == sIdx
-
-                            SentenceBlock(
-                                sentenceSpan = sentenceSpan,
-                                isSentenceActive = isSentenceActive,
-                                activeWordCharStart = if (isSentenceActive) ttsState.currentWordCharStart else -1,
-                                activeWordCharLength = ttsState.currentWordCharLength,
+                        // Dyslexia Text Side
+                        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                            ReaderTextCanvas(
+                                uiState = uiState,
+                                userSettings = userSettings,
+                                ttsState = ttsState,
                                 theme = theme,
-                                fontSizeSp = userSettings.fontSize,
-                                lineSpacing = userSettings.lineSpacing,
-                                letterSpacingEm = userSettings.letterSpacing,
-                                fontOption = fontOption,
-                                script = parsed.script,
-                                bionicEnabled = userSettings.bionicEnabled,
-                                syllablesEnabled = userSettings.syllablesEnabled,
                                 onWordClicked = { wordSpan -> viewModel.inspectWord(wordSpan) },
-                                onSentenceClick = { viewModel.jumpToSentence(sIdx) }
+                                onSentenceClick = { sIdx -> viewModel.jumpToSentence(sIdx) }
                             )
-                            Spacer(modifier = Modifier.height((userSettings.fontSize * (userSettings.lineSpacing - 1f)).dp))
                         }
                     }
+                } else {
+                    // Standard Dyslexia Reading Canvas
+                    ReaderTextCanvas(
+                        uiState = uiState,
+                        userSettings = userSettings,
+                        ttsState = ttsState,
+                        theme = theme,
+                        onWordClicked = { wordSpan -> viewModel.inspectWord(wordSpan) },
+                        onSentenceClick = { sIdx -> viewModel.jumpToSentence(sIdx) }
+                    )
                 }
 
                 // Reading Ruler Overlay if toggled
-                if (uiState.isRulerActive) {
-                    ReadingRulerOverlay()
+                if (uiState.isRulerActive && !uiState.isEditMode) {
+                    ReadingRulerOverlay(
+                        windowLines = userSettings.rulerWindowLines
+                    )
+                }
+
+                // Minimal floating controls when in Full-Screen mode
+                if (uiState.isFullScreen) {
+                    Row(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(DesignTokens.Spacing.lg),
+                        horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.sm)
+                    ) {
+                        FloatingActionButton(
+                            onClick = { if (ttsState.isPlaying) viewModel.pauseTts() else viewModel.playTts() },
+                            containerColor = TerracottaAccent,
+                            contentColor = Color.White
+                        ) {
+                            Icon(
+                                imageVector = if (ttsState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                contentDescription = "Play/Pause"
+                            )
+                        }
+
+                        FloatingActionButton(
+                            onClick = viewModel::openTextSettings,
+                            containerColor = theme.surface,
+                            contentColor = theme.textPrimary
+                        ) {
+                            Icon(Icons.Default.Settings, contentDescription = "Settings")
+                        }
+
+                        FloatingActionButton(
+                            onClick = viewModel::toggleFullScreen,
+                            containerColor = theme.surface,
+                            contentColor = theme.textPrimary
+                        ) {
+                            Icon(Icons.Default.FullscreenExit, contentDescription = "Exit full screen")
+                        }
+                    }
                 }
             }
         }
@@ -231,13 +347,79 @@ fun ReaderScreen(
                 onUpdateFontSize = viewModel::updateFontSize,
                 onUpdateLineSpacing = viewModel::updateLineSpacing,
                 onUpdateLetterSpacing = viewModel::updateLetterSpacing,
+                onUpdateWordSpacing = viewModel::updateWordSpacing,
+                onUpdateMarginWidth = viewModel::updateMarginWidth,
                 onUpdateFontFamily = viewModel::updateFontFamily,
+                onUpdateRulerWindow = viewModel::updateRulerWindowLines,
+                onUpdateChunkingPalette = viewModel::updateChunkingPaletteIndex,
                 onToggleBionic = viewModel::toggleBionicReading,
                 onToggleSyllables = viewModel::toggleSyllableBreaks,
                 onUpdateTtsSpeed = viewModel::updateTtsSpeed,
                 onUpdateTtsPitch = viewModel::updateTtsPitch
             )
         }
+    }
+}
+
+@Composable
+private fun ReaderTextCanvas(
+    uiState: ReaderUiState,
+    userSettings: UserSettings,
+    ttsState: TtsPlaybackState,
+    theme: ReaderThemePreset,
+    onWordClicked: (WordSpan) -> Unit,
+    onSentenceClick: (Int) -> Unit
+) {
+    val parsed = uiState.parsedText ?: return
+    val fontOption = resolveFontForScript(userSettings.fontFamily, parsed.script)
+    val (chunkColor1, chunkColor2) = PhonicsSyllableUtil.getChunkPalette(userSettings.chunkingPaletteIndex)
+
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(horizontal = userSettings.marginWidth.dp, vertical = DesignTokens.Spacing.md)
+    ) {
+        itemsIndexed(parsed.sentences) { sIdx, sentenceSpan ->
+            val isSentenceActive = ttsState.isPlaying && ttsState.currentSentenceIndex == sIdx
+
+            SentenceBlock(
+                sentenceSpan = sentenceSpan,
+                isSentenceActive = isSentenceActive,
+                activeWordCharStart = if (isSentenceActive) ttsState.currentWordCharStart else -1,
+                activeWordCharLength = ttsState.currentWordCharLength,
+                theme = theme,
+                fontSizeSp = userSettings.fontSize,
+                lineSpacing = userSettings.lineSpacing,
+                letterSpacingEm = userSettings.letterSpacing,
+                wordSpacingEm = userSettings.wordSpacing,
+                fontOption = fontOption,
+                script = parsed.script,
+                bionicEnabled = userSettings.bionicEnabled,
+                syllablesEnabled = userSettings.syllablesEnabled,
+                chunkColor1 = chunkColor1,
+                chunkColor2 = chunkColor2,
+                onWordClicked = onWordClicked,
+                onSentenceClick = { onSentenceClick(sIdx) }
+            )
+            Spacer(modifier = Modifier.height((userSettings.fontSize * (userSettings.lineSpacing - 1f)).dp))
+        }
+    }
+}
+
+/**
+ * Script-Aware Font Selection:
+ * If the document contains Indic text (Devanagari, Gujarati, Bengali), OpenDyslexic is NEVER used.
+ * Appropriate Google Noto Sans or Lexend is chosen automatically.
+ */
+private fun resolveFontForScript(
+    selectedFontId: String,
+    script: SupportedScript
+): DyslexiaFontOption {
+    return when (script) {
+        SupportedScript.DEVANAGARI -> DyslexiaFontOption.NOTO_SANS_DEVANAGARI
+        SupportedScript.GUJARATI -> DyslexiaFontOption.NOTO_SANS_GUJARATI
+        SupportedScript.BENGALI -> DyslexiaFontOption.NOTO_SANS_BENGALI
+        SupportedScript.LATIN -> DyslexiaFontOption.fromId(selectedFontId)
     }
 }
 
@@ -252,10 +434,13 @@ private fun SentenceBlock(
     fontSizeSp: Float,
     lineSpacing: Float,
     letterSpacingEm: Float,
+    wordSpacingEm: Float,
     fontOption: DyslexiaFontOption,
     script: SupportedScript,
     bionicEnabled: Boolean,
     syllablesEnabled: Boolean,
+    chunkColor1: Color,
+    chunkColor2: Color,
     onWordClicked: (WordSpan) -> Unit,
     onSentenceClick: () -> Unit
 ) {
@@ -275,7 +460,7 @@ private fun SentenceBlock(
             verticalArrangement = Arrangement.spacedBy(4.dp)
         ) {
             sentenceSpan.words.forEach { wordSpan ->
-                val isWordActive = isSentenceActive && 
+                val isWordActive = isSentenceActive &&
                     activeWordCharStart >= 0 &&
                     wordSpan.startIndex <= activeWordCharStart &&
                     (wordSpan.startIndex + wordSpan.word.length) >= activeWordCharStart
@@ -290,9 +475,11 @@ private fun SentenceBlock(
                     script = script,
                     bionicEnabled = bionicEnabled,
                     syllablesEnabled = syllablesEnabled,
+                    chunkColor1 = chunkColor1,
+                    chunkColor2 = chunkColor2,
                     onClick = { onWordClicked(wordSpan) }
                 )
-                Spacer(modifier = Modifier.width(6.dp))
+                Spacer(modifier = Modifier.width((6 + wordSpacingEm * 20).dp))
             }
         }
     }
@@ -309,6 +496,8 @@ private fun WordChip(
     script: SupportedScript,
     bionicEnabled: Boolean,
     syllablesEnabled: Boolean,
+    chunkColor1: Color,
+    chunkColor2: Color,
     onClick: () -> Unit
 ) {
     Box(
@@ -321,17 +510,24 @@ private fun WordChip(
             .padding(horizontal = 2.dp, vertical = 1.dp)
     ) {
         if (syllablesEnabled && wordSpan.syllables.size > 1) {
-            // Syllable separated display: e.g. "read · ing"
+            // Syllable / Chunk Coloring: alternate soft colour pairs
+            val annotated = buildAnnotatedString {
+                wordSpan.syllables.forEachIndexed { idx, syllable ->
+                    val color = if (idx % 2 == 0) chunkColor1 else chunkColor2
+                    withStyle(SpanStyle(color = color, fontWeight = FontWeight.SemiBold)) {
+                        append(syllable)
+                    }
+                }
+            }
             Text(
-                text = wordSpan.syllables.joinToString("·"),
+                text = annotated,
                 fontSize = fontSizeSp.sp,
                 fontFamily = fontOption.fontFamily,
-                color = theme.textPrimary,
                 letterSpacing = letterSpacingEm.sp,
                 textAlign = TextAlign.Start
             )
         } else if (bionicEnabled) {
-            // Bionic fixation display: bold initial 40% letters
+            // Bionic fixation display: bold initial letters
             val (prefix, suffix) = PhonicsSyllableUtil.splitForBionicFocus(wordSpan.word, script.primaryLocale)
             val annotated = buildAnnotatedString {
                 withStyle(SpanStyle(fontWeight = FontWeight.ExtraBold, color = theme.textPrimary)) {
@@ -359,6 +555,67 @@ private fun WordChip(
                 letterSpacing = letterSpacingEm.sp,
                 textAlign = TextAlign.Start
             )
+        }
+    }
+}
+
+@Composable
+private fun EditModeCanvas(
+    draftText: String,
+    onTextChange: (String) -> Unit,
+    onSave: () -> Unit,
+    onCancel: () -> Unit,
+    theme: ReaderThemePreset
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(DesignTokens.Spacing.lg)
+    ) {
+        Text(
+            text = "Edit Scanned Text",
+            style = MaterialTheme.typography.titleLarge,
+            fontWeight = FontWeight.Bold,
+            color = theme.textPrimary
+        )
+        Text(
+            text = "Fix any misspelled words or OCR mistakes below:",
+            style = MaterialTheme.typography.bodyMedium,
+            color = CharcoalTextSecondary
+        )
+        Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
+
+        OutlinedTextField(
+            value = draftText,
+            onValueChange = onTextChange,
+            modifier = Modifier
+                .weight(1f)
+                .fillMaxWidth(),
+            textStyle = MaterialTheme.typography.bodyLarge.copy(color = theme.textPrimary)
+        )
+
+        Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.md)
+        ) {
+            OutlinedButton(
+                onClick = onCancel,
+                modifier = Modifier.weight(1f).height(DesignTokens.buttonHeight)
+            ) {
+                Text("Cancel")
+            }
+
+            Button(
+                onClick = onSave,
+                modifier = Modifier.weight(1f).height(DesignTokens.buttonHeight),
+                colors = ButtonDefaults.buttonColors(containerColor = TerracottaAccent)
+            ) {
+                Icon(Icons.Default.Save, contentDescription = null, tint = Color.White)
+                Spacer(modifier = Modifier.width(DesignTokens.Spacing.xs))
+                Text("Save Changes", color = Color.White, fontWeight = FontWeight.Bold)
+            }
         }
     }
 }

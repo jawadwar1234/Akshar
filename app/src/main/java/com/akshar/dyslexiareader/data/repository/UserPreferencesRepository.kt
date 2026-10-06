@@ -6,6 +6,7 @@ import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
+import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.akshar.dyslexiareader.domain.model.UserSettings
@@ -29,12 +30,16 @@ class UserPreferencesRepository @Inject constructor(
         val IS_OFFLINE_MODE = booleanPreferencesKey("is_offline_mode")
         val APP_LANGUAGE = stringPreferencesKey("app_language")
         val RULER_ENABLED = booleanPreferencesKey("ruler_enabled")
+        val RULER_WINDOW_LINES = intPreferencesKey("ruler_window_lines")
         val BIONIC_ENABLED = booleanPreferencesKey("bionic_enabled")
         val SYLLABLES_ENABLED = booleanPreferencesKey("syllables_enabled")
+        val CHUNKING_PALETTE_INDEX = intPreferencesKey("chunking_palette_index")
         val READER_THEME = stringPreferencesKey("reader_theme")
         val FONT_SIZE = floatPreferencesKey("font_size")
         val LINE_SPACING = floatPreferencesKey("line_spacing")
         val LETTER_SPACING = floatPreferencesKey("letter_spacing")
+        val WORD_SPACING = floatPreferencesKey("word_spacing")
+        val MARGIN_WIDTH = intPreferencesKey("margin_width")
         val FONT_FAMILY = stringPreferencesKey("font_family")
         val TTS_SPEED = floatPreferencesKey("tts_speed")
         val TTS_PITCH = floatPreferencesKey("tts_pitch")
@@ -48,12 +53,16 @@ class UserPreferencesRepository @Inject constructor(
             isOfflineMode = prefs[PreferencesKeys.IS_OFFLINE_MODE] ?: true,
             appLanguage = AppLanguage.fromCode(prefs[PreferencesKeys.APP_LANGUAGE]),
             rulerEnabled = prefs[PreferencesKeys.RULER_ENABLED] ?: false,
+            rulerWindowLines = prefs[PreferencesKeys.RULER_WINDOW_LINES] ?: 1,
             bionicEnabled = prefs[PreferencesKeys.BIONIC_ENABLED] ?: false,
             syllablesEnabled = prefs[PreferencesKeys.SYLLABLES_ENABLED] ?: false,
+            chunkingPaletteIndex = prefs[PreferencesKeys.CHUNKING_PALETTE_INDEX] ?: 0,
             readerTheme = prefs[PreferencesKeys.READER_THEME] ?: "cream",
             fontSize = prefs[PreferencesKeys.FONT_SIZE] ?: 22f,
             lineSpacing = prefs[PreferencesKeys.LINE_SPACING] ?: 1.6f,
             letterSpacing = prefs[PreferencesKeys.LETTER_SPACING] ?: 0.08f,
+            wordSpacing = prefs[PreferencesKeys.WORD_SPACING] ?: 0.1f,
+            marginWidth = prefs[PreferencesKeys.MARGIN_WIDTH] ?: 16,
             fontFamily = prefs[PreferencesKeys.FONT_FAMILY] ?: "lexend",
             ttsSpeed = prefs[PreferencesKeys.TTS_SPEED] ?: 1.0f,
             ttsPitch = prefs[PreferencesKeys.TTS_PITCH] ?: 1.0f
@@ -98,10 +107,14 @@ class UserPreferencesRepository @Inject constructor(
         fontSize: Float? = null,
         lineSpacing: Float? = null,
         letterSpacing: Float? = null,
+        wordSpacing: Float? = null,
+        marginWidth: Int? = null,
         fontFamily: String? = null,
         rulerEnabled: Boolean? = null,
+        rulerWindowLines: Int? = null,
         bionicEnabled: Boolean? = null,
         syllablesEnabled: Boolean? = null,
+        chunkingPaletteIndex: Int? = null,
         ttsSpeed: Float? = null,
         ttsPitch: Float? = null
     ) {
@@ -110,10 +123,14 @@ class UserPreferencesRepository @Inject constructor(
             fontSize?.let { prefs[PreferencesKeys.FONT_SIZE] = it }
             lineSpacing?.let { prefs[PreferencesKeys.LINE_SPACING] = it }
             letterSpacing?.let { prefs[PreferencesKeys.LETTER_SPACING] = it }
+            wordSpacing?.let { prefs[PreferencesKeys.WORD_SPACING] = it }
+            marginWidth?.let { prefs[PreferencesKeys.MARGIN_WIDTH] = it }
             fontFamily?.let { prefs[PreferencesKeys.FONT_FAMILY] = it }
             rulerEnabled?.let { prefs[PreferencesKeys.RULER_ENABLED] = it }
+            rulerWindowLines?.let { prefs[PreferencesKeys.RULER_WINDOW_LINES] = it }
             bionicEnabled?.let { prefs[PreferencesKeys.BIONIC_ENABLED] = it }
             syllablesEnabled?.let { prefs[PreferencesKeys.SYLLABLES_ENABLED] = it }
+            chunkingPaletteIndex?.let { prefs[PreferencesKeys.CHUNKING_PALETTE_INDEX] = it }
             ttsSpeed?.let { prefs[PreferencesKeys.TTS_SPEED] = it }
             ttsPitch?.let { prefs[PreferencesKeys.TTS_PITCH] = it }
         }

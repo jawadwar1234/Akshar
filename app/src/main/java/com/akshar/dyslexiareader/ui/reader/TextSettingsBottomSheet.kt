@@ -41,6 +41,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.akshar.dyslexiareader.R
 import com.akshar.dyslexiareader.domain.model.UserSettings
+import com.akshar.dyslexiareader.domain.util.PhonicsSyllableUtil
 import com.akshar.dyslexiareader.ui.theme.CalmTeal
 import com.akshar.dyslexiareader.ui.theme.CharcoalTextPrimary
 import com.akshar.dyslexiareader.ui.theme.CharcoalTextSecondary
@@ -48,7 +49,6 @@ import com.akshar.dyslexiareader.ui.theme.DesignTokens
 import com.akshar.dyslexiareader.ui.theme.DyslexiaFontOption
 import com.akshar.dyslexiareader.ui.theme.PaperCreamBackground
 import com.akshar.dyslexiareader.ui.theme.PaperCreamBorder
-import com.akshar.dyslexiareader.ui.theme.PaperCreamSurface
 import com.akshar.dyslexiareader.ui.theme.ReaderThemePreset
 import com.akshar.dyslexiareader.ui.theme.TerracottaAccent
 
@@ -61,7 +61,11 @@ fun TextSettingsBottomSheet(
     onUpdateFontSize: (Float) -> Unit,
     onUpdateLineSpacing: (Float) -> Unit,
     onUpdateLetterSpacing: (Float) -> Unit,
+    onUpdateWordSpacing: (Float) -> Unit,
+    onUpdateMarginWidth: (Int) -> Unit,
     onUpdateFontFamily: (String) -> Unit,
+    onUpdateRulerWindow: (Int) -> Unit,
+    onUpdateChunkingPalette: (Int) -> Unit,
     onToggleBionic: () -> Unit,
     onToggleSyllables: () -> Unit,
     onUpdateTtsSpeed: (Float) -> Unit,
@@ -107,7 +111,7 @@ fun TextSettingsBottomSheet(
 
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
 
-            // 1. Theme Presets (Cream, Warm White, Sepia, Charcoal Night, Pale Blue)
+            // 1. Reading Color Theme (Cream, Warm White, Sepia, Charcoal Night, Pale Blue)
             Text(
                 text = stringResource(R.string.reader_theme_title),
                 style = MaterialTheme.typography.titleMedium,
@@ -175,7 +179,7 @@ fun TextSettingsBottomSheet(
 
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
 
-            // 3. Line Spacing Slider (1.4x - 2.2x)
+            // 3. Line Spacing Slider (1.4x - 2.4x)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween
@@ -195,8 +199,8 @@ fun TextSettingsBottomSheet(
             Slider(
                 value = userSettings.lineSpacing,
                 onValueChange = onUpdateLineSpacing,
-                valueRange = 1.4f..2.2f,
-                steps = 7,
+                valueRange = 1.4f..2.4f,
+                steps = 9,
                 colors = SliderDefaults.colors(
                     thumbColor = CalmTeal,
                     activeTrackColor = CalmTeal
@@ -235,7 +239,67 @@ fun TextSettingsBottomSheet(
 
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
 
-            // 5. Font Family Choice
+            // 5. Word Spacing Slider (0.00 - 0.30)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Word Spacing",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = CharcoalTextPrimary
+                )
+                Text(
+                    text = String.format("%.2f", userSettings.wordSpacing),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CharcoalTextSecondary
+                )
+            }
+            Slider(
+                value = userSettings.wordSpacing,
+                onValueChange = onUpdateWordSpacing,
+                valueRange = 0.00f..0.30f,
+                steps = 5,
+                colors = SliderDefaults.colors(
+                    thumbColor = CalmTeal,
+                    activeTrackColor = CalmTeal
+                )
+            )
+
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
+
+            // 6. Page Margin Width Slider (8dp - 32dp)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Page Margin Width",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = CharcoalTextPrimary
+                )
+                Text(
+                    text = "${userSettings.marginWidth} dp",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CharcoalTextSecondary
+                )
+            }
+            Slider(
+                value = userSettings.marginWidth.toFloat(),
+                onValueChange = { onUpdateMarginWidth(it.toInt()) },
+                valueRange = 8f..32f,
+                steps = 5,
+                colors = SliderDefaults.colors(
+                    thumbColor = TerracottaAccent,
+                    activeTrackColor = TerracottaAccent
+                )
+            )
+
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
+
+            // 7. Font Family Choice
             Text(
                 text = stringResource(R.string.reader_font_family),
                 style = MaterialTheme.typography.titleMedium,
@@ -259,7 +323,97 @@ fun TextSettingsBottomSheet(
 
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
 
-            // 6. Dyslexia Reading Tools Toggles
+            // 8. Focus Ruler Window Size (1 Line vs 3 Lines)
+            Text(
+                text = "Focus Ruler Window",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = CharcoalTextPrimary
+            )
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.xs))
+            Row(horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.sm)) {
+                FilterChip(
+                    selected = userSettings.rulerWindowLines == 1,
+                    onClick = { onUpdateRulerWindow(1) },
+                    label = { Text("1 Line Focus") },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = CalmTeal.copy(alpha = 0.15f),
+                        selectedLabelColor = CalmTeal
+                    )
+                )
+                FilterChip(
+                    selected = userSettings.rulerWindowLines >= 3,
+                    onClick = { onUpdateRulerWindow(3) },
+                    label = { Text("3 Lines Window") },
+                    colors = FilterChipDefaults.filterChipColors(
+                        selectedContainerColor = CalmTeal.copy(alpha = 0.15f),
+                        selectedLabelColor = CalmTeal
+                    )
+                )
+            }
+
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
+
+            // 9. Syllables / Chunking & Palettes
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onToggleSyllables() }
+                    .padding(vertical = DesignTokens.Spacing.xs),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = "Chunk / Syllable Coloring",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = CharcoalTextPrimary
+                    )
+                    Text(
+                        text = "Alternates soft color pairs per syllable",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CharcoalTextSecondary
+                    )
+                }
+                Switch(
+                    checked = userSettings.syllablesEnabled,
+                    onCheckedChange = { onToggleSyllables() },
+                    colors = SwitchDefaults.colors(checkedThumbColor = CalmTeal)
+                )
+            }
+
+            if (userSettings.syllablesEnabled) {
+                Spacer(modifier = Modifier.height(DesignTokens.Spacing.xs))
+                Text(
+                    text = "Color-Blind Safe Palette:",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = CharcoalTextSecondary
+                )
+                Spacer(modifier = Modifier.height(DesignTokens.Spacing.xs))
+                Row(horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.sm)) {
+                    val paletteNames = listOf("Blue / Amber", "Sage / Plum", "Teal / Rust")
+                    paletteNames.forEachIndexed { pIdx, name ->
+                        val (c1, c2) = PhonicsSyllableUtil.getChunkPalette(pIdx)
+                        FilterChip(
+                            selected = userSettings.chunkingPaletteIndex == pIdx,
+                            onClick = { onUpdateChunkingPalette(pIdx) },
+                            label = {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Box(modifier = Modifier.size(10.dp).background(c1, CircleShape))
+                                    Spacer(modifier = Modifier.width(3.dp))
+                                    Box(modifier = Modifier.size(10.dp).background(c2, CircleShape))
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(name)
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
+
+            // 10. Bionic Fixation Toggle
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -275,7 +429,7 @@ fun TextSettingsBottomSheet(
                         color = CharcoalTextPrimary
                     )
                     Text(
-                        text = "Highlights initial letters to guide eye fixation",
+                        text = "Bolds initial letters to guide eye fixation",
                         style = MaterialTheme.typography.bodySmall,
                         color = CharcoalTextSecondary
                     )
@@ -287,36 +441,9 @@ fun TextSettingsBottomSheet(
                 )
             }
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onToggleSyllables() }
-                    .padding(vertical = DesignTokens.Spacing.xs),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = stringResource(R.string.reader_syllables_toggle),
-                        style = MaterialTheme.typography.titleMedium,
-                        color = CharcoalTextPrimary
-                    )
-                    Text(
-                        text = "Separates words into readable sound units",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = CharcoalTextSecondary
-                    )
-                }
-                Switch(
-                    checked = userSettings.syllablesEnabled,
-                    onCheckedChange = { onToggleSyllables() },
-                    colors = SwitchDefaults.colors(checkedThumbColor = CalmTeal)
-                )
-            }
-
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
 
-            // 7. TTS Speed & Pitch Controls
+            // 11. TTS Speed & Pitch Controls
             Text(
                 text = stringResource(R.string.reader_tts_speed),
                 style = MaterialTheme.typography.titleMedium,

@@ -24,7 +24,10 @@ enum class DyslexiaFontOption(
 ) {
     LEXEND("lexend", "Lexend (Clear & Clean)", FontFamily.SansSerif),
     OPEN_DYSLEXIC("open_dyslexic", "OpenDyslexic (Weighted Bottoms)", FontFamily.Serif),
-    NOTO_SANS("noto_sans", "Noto Sans (Indic Optimized)", FontFamily.Default),
+    NOTO_SANS("noto_sans", "Noto Sans", FontFamily.Default),
+    NOTO_SANS_DEVANAGARI("noto_sans_devanagari", "Noto Sans Devanagari", FontFamily.Default),
+    NOTO_SANS_GUJARATI("noto_sans_gujarati", "Noto Sans Gujarati", FontFamily.Default),
+    NOTO_SANS_BENGALI("noto_sans_bengali", "Noto Sans Bengali", FontFamily.Default),
     SYSTEM_MONO("system_mono", "Monospace (Fixed Width)", FontFamily.Monospace);
 
     companion object {

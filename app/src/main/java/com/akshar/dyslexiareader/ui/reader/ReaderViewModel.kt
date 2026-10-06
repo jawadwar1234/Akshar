@@ -28,7 +28,11 @@ data class ReaderUiState(
     val activeWordCharLength: Int = 0,
     val selectedWordForInspection: WordSpan? = null,
     val isTextSettingsSheetOpen: Boolean = false,
-    val isRulerActive: Boolean = false
+    val isRulerActive: Boolean = false,
+    val isFullScreen: Boolean = false,
+    val isBeforeAfterSplit: Boolean = false,
+    val isEditMode: Boolean = false,
+    val editableDraftText: String = ""
 )
 
 @HiltViewModel
@@ -54,7 +58,8 @@ class ReaderViewModel @Inject constructor(
                 val parsed = UnicodeIndicTextUtil.parseReaderText(doc.cleanText)
                 _uiState.value = _uiState.value.copy(
                     document = doc,
-                    parsedText = parsed
+                    parsedText = parsed,
+                    editableDraftText = doc.cleanText
                 )
 
                 // Prepare TTS with sentences and offsets
@@ -97,6 +102,53 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    fun toggleFullScreen() {
+        _uiState.value = _uiState.value.copy(isFullScreen = !_uiState.value.isFullScreen)
+    }
+
+    fun toggleBeforeAfterSplit() {
+        _uiState.value = _uiState.value.copy(isBeforeAfterSplit = !_uiState.value.isBeforeAfterSplit)
+    }
+
+    fun toggleEditMode() {
+        val next = !_uiState.value.isEditMode
+        _uiState.value = _uiState.value.copy(
+            isEditMode = next,
+            editableDraftText = _uiState.value.document?.cleanText ?: ""
+        )
+    }
+
+    fun updateDraftText(newText: String) {
+        _uiState.value = _uiState.value.copy(editableDraftText = newText)
+    }
+
+    fun saveEditedText() {
+        val doc = _uiState.value.document ?: return
+        val newText = _uiState.value.editableDraftText
+        val parsed = UnicodeIndicTextUtil.parseReaderText(newText)
+
+        viewModelScope.launch {
+            val updatedDoc = doc.copy(
+                cleanText = parsed.fullText,
+                wordCount = parsed.allWords.size,
+                detectedScript = parsed.script.name,
+                updatedAt = System.currentTimeMillis()
+            )
+            documentRepository.saveDocument(updatedDoc)
+
+            _uiState.value = _uiState.value.copy(
+                document = updatedDoc,
+                parsedText = parsed,
+                isEditMode = false
+            )
+
+            // Re-prepare TTS with updated sentences
+            val sentences = parsed.sentences.map { it.sentence }
+            val offsets = parsed.sentences.map { it.startIndex }
+            ttsManager.prepareText(sentences, offsets, parsed.script)
+        }
+    }
+
     fun openTextSettings() {
         _uiState.value = _uiState.value.copy(isTextSettingsSheetOpen = true)
     }
@@ -129,9 +181,33 @@ class ReaderViewModel @Inject constructor(
         }
     }
 
+    fun updateWordSpacing(spacing: Float) {
+        viewModelScope.launch {
+            preferencesRepository.updateReaderPreferences(wordSpacing = spacing)
+        }
+    }
+
+    fun updateMarginWidth(marginDp: Int) {
+        viewModelScope.launch {
+            preferencesRepository.updateReaderPreferences(marginWidth = marginDp)
+        }
+    }
+
     fun updateFontFamily(fontId: String) {
         viewModelScope.launch {
             preferencesRepository.updateReaderPreferences(fontFamily = fontId)
+        }
+    }
+
+    fun updateRulerWindowLines(lines: Int) {
+        viewModelScope.launch {
+            preferencesRepository.updateReaderPreferences(rulerWindowLines = lines)
+        }
+    }
+
+    fun updateChunkingPaletteIndex(index: Int) {
+        viewModelScope.launch {
+            preferencesRepository.updateReaderPreferences(chunkingPaletteIndex = index)
         }
     }
 
@@ -179,13 +255,6 @@ class ReaderViewModel @Inject constructor(
 
     fun dismissWordInspection() {
         _uiState.value = _uiState.value.copy(selectedWordForInspection = null)
-    }
-
-    fun updateReadingProgress(progressPercent: Int, lastReadWordIndex: Int) {
-        val doc = _uiState.value.document ?: return
-        viewModelScope.launch {
-            documentRepository.updateProgress(doc.id, progressPercent, lastReadWordIndex)
-        }
     }
 
     override fun onCleared() {
