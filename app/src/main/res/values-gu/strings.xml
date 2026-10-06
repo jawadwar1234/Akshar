@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App & General -->
+    <string name="app_name">અક્ષર</string>
+    <string name="app_subtitle">ડિસ્લેક્સિયા પાઠ્યપુસ્તક વાચક</string>
+    <string name="action_back">પાછા</string>
+    <string name="action_save">સાચવો</string>
+    <string name="action_cancel">રદ કરો</string>
+    <string name="action_delete">કાઢી નાખો</string>
+    <string name="action_done">પૂર્ણ</string>
+    <string name="action_close">બંધ કરો</string>
+    <string name="action_retry">ફરી પ્રયાસ કરો</string>
+    <string name="action_continue">આગળ વધો</string>
+    <string name="action_select">પસંદ કરો</string>
+    <string name="action_edit">ફેરફાર કરો</string>
+    <string name="action_clear">સાફ કરો</string>
+    <string name="offline_badge">ઑફલાઇન તૈયાર</string>
+
+    <!-- Navigation -->
+    <string name="nav_library">મારા પુસ્તકો</string>
+    <string name="nav_scan">પાનું સ્કેન કરો</string>
+    <string name="nav_practice">અભ્યાસ</string>
+    <string name="nav_settings">સેટિંગ્સ</string>
+    <string name="nav_profiles">પ્રોફાઇલ્સ</string>
+
+    <!-- DPDP Act 2023 Consent & Onboarding -->
+    <string name="consent_title">અક્ષરમાં આપનું સ્વાગત છે</string>
+    <string name="consent_subtitle">આપના બાળક માટે એક સલામત અને સરળ વાંચન સાથી.</string>
+    <string name="consent_privacy_heading">અમારી ગોપનીયતા અને ડેટા સુરક્ષા નીતિ</string>
+    <string name="consent_bullet_1">તમામ પુસ્તક સ્કેનિંગ અને વાંચન અભ્યાસ તમારા ફોન પર જ રહે છે.</string>
+    <string name="consent_bullet_2">કોઈ જાહેરાતો નથી અને કોઈ અંગત ડેટા વેચવામાં આવતો નથી.</string>
+    <string name="consent_bullet_3">ક્લાઉડ બેકઅપ વૈકલ્પિક છે અને વાલી ખાતા દ્વારા સુરક્ષિત છે.</string>
+    <string name="consent_bullet_4">ભારતના DPDP કાયદા ૨૦૨૩ મુજબ, તમારો ડેટા જોવાનો અથવા કાઢી નાખવાનો સંપૂર્ણ અધિકાર તમારો છે.</string>
+    <string name="consent_checkbox">વાલી અથવા શિક્ષક તરીકે, હું શૈક્ષણિક ઉપયોગ માટે સંમતિ આપું છું.</string>
+    <string name="consent_button_accept">સ્વીકારો અને આગળ વધો</string>
+
+    <!-- Auth & Profiles -->
+    <string name="auth_title">વાલી / શિક્ષક લૉગિન</string>
+    <string name="auth_subtitle">વિદ્યાર્થી પ્રોફાઇલ મેનેજ કરો અને વાંચન પ્રગતિ સુરક્ષિત રાખો.</string>
+    <string name="auth_email_label">ઈમેલ સરનામું</string>
+    <string name="auth_password_label">પાસવર્ડ</string>
+    <string name="auth_btn_login">સાઇન ઇન કરો</string>
+    <string name="auth_btn_register">નવું વાલી એકાઉન્ટ બનાવો</string>
+    <string name="auth_btn_google">Google સાથે ચાલુ રાખો</string>
+    <string name="auth_btn_offline">ઑફલાઇન મોડ વાપરો</string>
+    <string name="auth_guest_notice">એકાઉન્ટ વિના પણ તમે તમામ સ્કેન અને વાંચન સુવિધાઓ વાપરી શકો છો.</string>
+
+    <!-- Profiles & Child PIN Lock -->
+    <string name="profiles_title">આજે કોણ વાંચી રહ્યું છે?</string>
+    <string name="profiles_add_student">નવો વિદ્યાર્થી ઉમેરો</string>
+    <string name="profiles_edit_student">વિદ્યાર્થી પ્રોફાઇલ બદલો</string>
+    <string name="profiles_name_label">વિદ્યાર્થીનું નામ</string>
+    <string name="profiles_grade_label">ધોરણ / વર્ગ</string>
+    <string name="profiles_pin_type_title">અનલૉક પદ્ધતિ પસંદ કરો</string>
+    <string name="profiles_pin_type_picture">ચિત્ર પિન (૩ સરળ ચિત્રો પસંદ કરો)</string>
+    <string name="profiles_pin_type_number">૪ અંકનો નંબર પિન</string>
+    <string name="pin_unlock_title">અનલૉક કરવા માટે પિન દાખલ કરો</string>
+    <string name="pin_picture_prompt">ક્રમમાં તમારા ૩ મનપસંદ ચિત્રો પસંદ કરો</string>
+    <string name="pin_number_prompt">તમારો ૪ અંકનો ગુપ્ત પિન દાખલ કરો</string>
+    <string name="pin_incorrect">પિન સાચો ન હતો. ફરી પ્રયાસ કરો!</string>
+    <string name="pin_set_success">પિન સફળતાપૂર્વક સાચવવામાં આવ્યો!</string>
+
+    <!-- Camera & Scan -->
+    <string name="camera_title">પાઠ્યપુસ્તક પાનું સ્કેન કરો</string>
+    <string name="camera_hint">ફોનને પુસ્તકના પાના પર સ્થિર રાખો</string>
+    <string name="camera_btn_capture">ફોટો લો</string>
+    <string name="camera_btn_flash_on">ફ્લેશ ચાલુ</string>
+    <string name="camera_btn_flash_off">ફ્લેશ બંધ</string>
+    <string name="camera_permission_required">પુસ્તકના ફોટા લેવા માટે કૅમેરાની પરવાનગી જરૂરી છે.</string>
+    <string name="camera_btn_grant">કૅમેરા પરવાનગી આપો</string>
+    <string name="crop_title">પાનાનું માપ ગોઠવો</string>
+    <string name="crop_hint">ખૂણાઓને ખેંચીને લખાણને ફ્રેમમાં લાવો.</string>
+    <string name="crop_btn_rotate">પાનું ફેરવો</string>
+    <string name="crop_btn_enhance">સ્પષ્ટતા વધારો</string>
+    <string name="crop_btn_ocr">આ પાનું વાંચો</string>
+    <string name="ocr_processing">લખાણ વાંચી રહ્યું છે…</string>
+    <string name="ocr_error_empty">પાના પર સ્પષ્ટ લખાણ મળ્યું નથી. કૃપા કરીને સારા પ્રકાશમાં ફરી પ્રયાસ કરો.</string>
+    <string name="ocr_beta_tesseract_banner">ગુજરાતી અને બંગાળી લખાણ ઓળખ બીટા સંસ્કરણમાં છે.</string>
+
+    <!-- Reader Screen -->
+    <string name="reader_title">પુસ્તક વાંચન</string>
+    <string name="reader_btn_play">મોટેથી વાંચો</string>
+    <string name="reader_btn_pause">રોકો</string>
+    <string name="reader_btn_stop">બંધ કરો</string>
+    <string name="reader_btn_prev_sentence">પાછલી લીટી</string>
+    <string name="reader_btn_next_sentence">આગલી લીટી</string>
+    <string name="reader_btn_appearance">લખાણ વિકલ્પો</string>
+    <string name="reader_btn_ruler">રીડિંગ રૂલર</string>
+    <string name="reader_btn_practice">વાંચન અભ્યાસ</string>
+    <string name="reader_font_size">અક્ષરનું કદ</string>
+    <string name="reader_line_spacing">લીટીઓ વચ્ચેનું અંતર</string>
+    <string name="reader_letter_spacing">અક્ષરો વચ્ચેનું અંતર</string>
+    <string name="reader_font_family">ફોન્ટ શૈલી</string>
+    <string name="reader_theme_title">પૃષ્ઠભૂમિ રંગ</string>
+    <string name="reader_theme_cream">હળવો ક્રીમ</string>
+    <string name="reader_theme_white">સફેદ</string>
+    <string name="reader_theme_sepia">સેપિયા કાગળ</string>
+    <string name="reader_theme_charcoal">રાત્રિ મોડ</string>
+    <string name="reader_theme_pale_blue">આછો વાદળી</string>
+    <string name="reader_ruler_overlay">લીટી ફોકસ પટ્ટી</string>
+    <string name="reader_bionic_reading">બાયોનિક ફોકસ</string>
+    <string name="reader_syllables_toggle">અક્ષર ખંડ બતાવો</string>
+    <string name="reader_tts_speed">વાંચનની ઝડપ</string>
+    <string name="reader_tts_pitch">અવાજનો સૂર</string>
+    <string name="reader_tts_missing_voice">આ ભાષા માટે બોલવાનો અવાજ ઉપલબ્ધ નથી. કૃપા કરીને એન્ડ્રોઇડ સેટિંગ્સમાં ઇન્સ્ટોલ કરો.</string>
+
+    <!-- Practice Mode & Word Mastery -->
+    <string name="practice_title">સાથે વાંચન અભ્યાસ</string>
+    <string name="practice_instruction">માઇક પર ટેપ કરો અને હાઇલાઇટ કરેલો શબ્દ મોટેથી વાંચો.</string>
+    <string name="practice_btn_mic_start">વાંચવાનું શરૂ કરો</string>
+    <string name="practice_btn_mic_listening">સાંભળી રહ્યા છીએ…</string>
+    <string name="practice_btn_mic_stop">પૂર્ણ થયું</string>
+    <string name="practice_praise_great">🌟 ઉત્તમ વાંચન!</string>
+    <string name="practice_praise_keep_going">સરસ પ્રયાસ! અભ્યાસ ચાલુ રાખો!</string>
+    <string name="practice_praise_mastered">નવો શબ્દ શીખ્યા! 🎉</string>
+    <string name="practice_words_mastered_title">શીખેલા શબ્દો</string>
+    <string name="practice_words_empty">શબ્દો એકત્રિત કરવા માટે વાંચન અભ્યાસ કરો!</string>
+    <string name="practice_mic_permission_required">વાંચન અભ્યાસ સાંભળવા માટે માઇક્રોફોન પરવાનગી જરૂરી છે.</string>
+    <string name="practice_btn_grant_mic">માઇક્રોફોન પરવાનગી આપો</string>
+
+    <!-- Library Screen -->
+    <string name="library_title">મારા સ્કેન કરેલા પુસ્તકો</string>
+    <string name="library_search_hint">પાના શોધો…</string>
+    <string name="library_empty_title">હજી કોઈ પાના સાચવ્યા નથી</string>
+    <string name="library_empty_subtitle">પહેલું પાનું ઉમેરવા માટે \"પાનું સ્કેન કરો\" પર ટેપ કરો!</string>
+    <string name="library_filter_all">બધા પાના</string>
+    <string name="library_words_count">%1$d શબ્દો</string>
+    <string name="library_read_progress">%1$d%% વંચાયેલ</string>
+    <string name="library_btn_delete_confirm">શું તમે ખરેખર આ પાનું કાઢી નાખવા માંગો છો?</string>
+
+    <!-- Settings & Data Management -->
+    <string name="settings_title">સેટિંગ્સ અને ગોપનીયતા</string>
+    <string name="settings_section_language">એપ્લિકેશનની ભાષા</string>
+    <string name="settings_section_account">એકાઉન્ટ અને સિંક</string>
+    <string name="settings_section_privacy">ડેટા અધિકાર અને DPDP</string>
+    <string name="settings_export_data">ડેટા નિકાસ કરો (JSON / Text)</string>
+    <string name="settings_export_success">ડેટા સફળતાપૂર્વક નિકાસ થયો!</string>
+    <string name="settings_delete_profile">હાલની પ્રોફાઇલ કાઢી નાખો</string>
+    <string name="settings_delete_account">એકાઉન્ટ અને તમામ ડેટા કાઢી નાખો</string>
+    <string name="settings_delete_confirm_title">એકાઉન્ટ કાઢી નાખવાની ખાતરી</string>
+    <string name="settings_delete_confirm_msg">આ ઉપકરણ અને ક્લાઉડમાંથી તમામ પુસ્તકો અને પ્રોફાઇલ્સ કાયમ માટે કાઢી નાખવામાં આવશે.</string>
+    <string name="settings_about">અક્ષર ડિસ્લેક્સિયા રીડર વિશે</string>
+    <string name="settings_version">આવૃત્તિ 1.0.0 (ઑફલાઇન પ્રથમ)</string>
+</resources>

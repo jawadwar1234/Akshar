@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- App & General -->
+    <string name="app_name">Akshar</string>
+    <string name="app_subtitle">Dyslexia Textbook Reader</string>
+    <string name="action_back">Back</string>
+    <string name="action_save">Save</string>
+    <string name="action_cancel">Cancel</string>
+    <string name="action_delete">Delete</string>
+    <string name="action_done">Done</string>
+    <string name="action_close">Close</string>
+    <string name="action_retry">Try Again</string>
+    <string name="action_continue">Continue</string>
+    <string name="action_select">Select</string>
+    <string name="action_edit">Edit</string>
+    <string name="action_clear">Clear</string>
+    <string name="offline_badge">Offline Ready</string>
+
+    <!-- Navigation -->
+    <string name="nav_library">My Books</string>
+    <string name="nav_scan">Scan Page</string>
+    <string name="nav_practice">Practice</string>
+    <string name="nav_settings">Settings</string>
+    <string name="nav_profiles">Profiles</string>
+
+    <!-- DPDP Act 2023 Consent & Onboarding -->
+    <string name="consent_title">Welcome to Akshar</string>
+    <string name="consent_subtitle">A gentle, private reading companion for your child.</string>
+    <string name="consent_privacy_heading">Our Privacy &amp; Data Promise</string>
+    <string name="consent_bullet_1">All textbook scanning, text reading, and practice stay on your phone.</string>
+    <string name="consent_bullet_2">No ads, no behavior tracking, and no third-party data selling ever.</string>
+    <string name="consent_bullet_3">Account sync with cloud storage is optional and protected under your parent account.</string>
+    <string name="consent_bullet_4">In accordance with India\'s DPDP Act 2023, you have complete ownership to view, export, or delete all data anytime.</string>
+    <string name="consent_checkbox">As a parent, guardian, or teacher, I consent to using Akshar for educational reading support.</string>
+    <string name="consent_button_accept">I Agree &amp; Continue</string>
+
+    <!-- Auth & Profiles -->
+    <string name="auth_title">Parent / Teacher Login</string>
+    <string name="auth_subtitle">Manage student profiles and keep reading history safe.</string>
+    <string name="auth_email_label">Email Address</string>
+    <string name="auth_password_label">Password</string>
+    <string name="auth_btn_login">Sign In</string>
+    <string name="auth_btn_register">Create Parent Account</string>
+    <string name="auth_btn_google">Continue with Google</string>
+    <string name="auth_btn_offline">Continue in Offline Mode</string>
+    <string name="auth_guest_notice">You can use all reader and scan features without an account.</string>
+
+    <!-- Profiles & Child PIN Lock -->
+    <string name="profiles_title">Who is reading today?</string>
+    <string name="profiles_add_student">Add New Student</string>
+    <string name="profiles_edit_student">Edit Student Profile</string>
+    <string name="profiles_name_label">Student Name</string>
+    <string name="profiles_grade_label">Grade / Class</string>
+    <string name="profiles_pin_type_title">Choose Child Unlock Method</string>
+    <string name="profiles_pin_type_picture">Picture PIN (Choose 3 friendly icons)</string>
+    <string name="profiles_pin_type_number">4-Digit Number PIN</string>
+    <string name="pin_unlock_title">Enter PIN to Unlock</string>
+    <string name="pin_picture_prompt">Tap your 3 favorite pictures in order</string>
+    <string name="pin_number_prompt">Enter your 4-digit secret PIN</string>
+    <string name="pin_incorrect">That PIN wasn\'t quite right. Let\'s try again!</string>
+    <string name="pin_set_success">PIN saved safely!</string>
+
+    <!-- Camera & Scan -->
+    <string name="camera_title">Scan Textbook Page</string>
+    <string name="camera_hint">Hold your phone steady over the textbook page</string>
+    <string name="camera_btn_capture">Take Photo</string>
+    <string name="camera_btn_flash_on">Flash On</string>
+    <string name="camera_btn_flash_off">Flash Off</string>
+    <string name="camera_permission_required">Camera access helps us photograph book pages so you can read them with Akshar.</string>
+    <string name="camera_btn_grant">Allow Camera</string>
+    <string name="crop_title">Adjust Page Boundaries</string>
+    <string name="crop_hint">Drag corners to frame the textbook text clearly.</string>
+    <string name="crop_btn_rotate">Rotate Page</string>
+    <string name="crop_btn_enhance">Enhance Text</string>
+    <string name="crop_btn_ocr">Read This Page</string>
+    <string name="ocr_processing">Reading text from your page…</string>
+    <string name="ocr_error_empty">We couldn\'t find clear text on that page. Let\'s try taking another photo in brighter light.</string>
+    <string name="ocr_beta_tesseract_banner">Gujarati and Bengali text recognition is in Beta. Results may vary.</string>
+
+    <!-- Reader Screen -->
+    <string name="reader_title">Reading Book</string>
+    <string name="reader_btn_play">Read Aloud</string>
+    <string name="reader_btn_pause">Pause</string>
+    <string name="reader_btn_stop">Stop</string>
+    <string name="reader_btn_prev_sentence">Previous Line</string>
+    <string name="reader_btn_next_sentence">Next Line</string>
+    <string name="reader_btn_appearance">Text Settings</string>
+    <string name="reader_btn_ruler">Reading Ruler</string>
+    <string name="reader_btn_practice">Practice Reading</string>
+    <string name="reader_font_size">Text Size</string>
+    <string name="reader_line_spacing">Line Spacing</string>
+    <string name="reader_letter_spacing">Letter Spacing</string>
+    <string name="reader_font_family">Dyslexia Font</string>
+    <string name="reader_theme_title">Background Theme</string>
+    <string name="reader_theme_cream">Warm Cream</string>
+    <string name="reader_theme_white">Soft White</string>
+    <string name="reader_theme_sepia">Sepia Paper</string>
+    <string name="reader_theme_charcoal">Charcoal Night</string>
+    <string name="reader_theme_pale_blue">Pale Blue</string>
+    <string name="reader_ruler_overlay">Line Focus Ruler</string>
+    <string name="reader_bionic_reading">Bionic Word Focus</string>
+    <string name="reader_syllables_toggle">Show Syllable Breaks</string>
+    <string name="reader_tts_speed">Reading Speed</string>
+    <string name="reader_tts_pitch">Voice Pitch</string>
+    <string name="reader_tts_missing_voice">Text-to-speech voice for this language is not installed on this phone. Please install it in Android Settings.</string>
+
+    <!-- Practice Mode & Word Mastery -->
+    <string name="practice_title">Read-Along Practice</string>
+    <string name="practice_instruction">Tap the microphone and read the highlighted word aloud at your own pace.</string>
+    <string name="practice_btn_mic_start">Start Reading</string>
+    <string name="practice_btn_mic_listening">Listening to you…</string>
+    <string name="practice_btn_mic_stop">Done</string>
+    <string name="practice_praise_great">🌟 Wonderful reading!</string>
+    <string name="practice_praise_keep_going">Great effort! Keep practicing!</string>
+    <string name="practice_praise_mastered">New word mastered! 🎉</string>
+    <string name="practice_words_mastered_title">Words You Have Mastered</string>
+    <string name="practice_words_empty">Practice reading book pages to collect words here!</string>
+    <string name="practice_mic_permission_required">Microphone access lets Akshar listen and celebrate as you practice reading.</string>
+    <string name="practice_btn_grant_mic">Allow Microphone</string>
+
+    <!-- Library Screen -->
+    <string name="library_title">My Scanned Books</string>
+    <string name="library_search_hint">Search scanned pages…</string>
+    <string name="library_empty_title">No saved book pages yet</string>
+    <string name="library_empty_subtitle">Tap \"Scan Page\" to photograph your first textbook page!</string>
+    <string name="library_filter_all">All Pages</string>
+    <string name="library_words_count">%1$d words</string>
+    <string name="library_read_progress">%1$d%% read</string>
+    <string name="library_btn_delete_confirm">Are you sure you want to remove this page?</string>
+
+    <!-- Settings & Data Management -->
+    <string name="settings_title">Settings &amp; Privacy</string>
+    <string name="settings_section_language">App Language</string>
+    <string name="settings_section_account">Account &amp; Sync</string>
+    <string name="settings_section_privacy">Data Ownership &amp; DPDP</string>
+    <string name="settings_export_data">Export My Data (JSON / Text)</string>
+    <string name="settings_export_success">Your reading data was exported successfully!</string>
+    <string name="settings_delete_profile">Delete Current Profile</string>
+    <string name="settings_delete_account">Delete Account &amp; Erase All Data</string>
+    <string name="settings_delete_confirm_title">Delete Account Confirmation</string>
+    <string name="settings_delete_confirm_msg">This will permanently erase all scanned books, mastery records, and profiles from this device and the cloud. This action cannot be undone.</string>
+    <string name="settings_about">About Akshar DyslexiaReader</string>
+    <string name="settings_version">Version 1.0.0 (Offline-First)</string>
+</resources>
