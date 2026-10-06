@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.MenuBook
@@ -59,6 +60,7 @@ fun ImageCropScreen(
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val bitmap = uiState.processedBitmap
+    val totalScanned = uiState.scannedPages.size
 
     Column(
         modifier = Modifier
@@ -81,7 +83,7 @@ fun ImageCropScreen(
                 )
             }
             Text(
-                text = stringResource(R.string.crop_title),
+                text = if (totalScanned > 0) "Page ${totalScanned + 1} of Lesson" else stringResource(R.string.crop_title),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = CharcoalTextPrimary
@@ -143,17 +145,23 @@ fun ImageCropScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(PaperCreamBackground.copy(alpha = 0.9f)),
+                        .background(PaperCreamBackground.copy(alpha = 0.92f)),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         CircularProgressIndicator(color = TerracottaAccent, strokeWidth = 3.dp)
                         Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
                         Text(
-                            text = stringResource(R.string.ocr_processing),
+                            text = "Reading your page...",
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = CharcoalTextPrimary
+                        )
+                        Spacer(modifier = Modifier.height(DesignTokens.Spacing.xs))
+                        Text(
+                            text = "Extracting words on your phone",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CharcoalTextSecondary
                         )
                     }
                 }
@@ -234,28 +242,53 @@ fun ImageCropScreen(
 
         Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
 
-        // Primary "Read This Page" Button
-        Button(
-            onClick = {
-                viewModel.runOcrOnCroppedImage { docId ->
-                    onOcrCompleted(docId)
-                }
-            },
-            enabled = bitmap != null && !uiState.isOcrProcessing,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(DesignTokens.buttonHeight),
-            shape = MaterialTheme.shapes.medium,
-            colors = ButtonDefaults.buttonColors(containerColor = TerracottaAccent)
+        // Action Buttons: "Add Another Page" and "Read Document"
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.md)
         ) {
-            Icon(Icons.Default.MenuBook, contentDescription = null, tint = Color.White)
-            Spacer(modifier = Modifier.width(DesignTokens.Spacing.sm))
-            Text(
-                text = stringResource(R.string.crop_btn_ocr),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = Color.White
-            )
+            // Multi-Page: Add Another Page
+            OutlinedButton(
+                onClick = { viewModel.addCurrentPageAndScanAnother(onNavigateBack) },
+                enabled = bitmap != null && !uiState.isOcrProcessing,
+                modifier = Modifier
+                    .weight(1f)
+                    .height(DesignTokens.buttonHeight),
+                shape = MaterialTheme.shapes.medium
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, tint = CharcoalTextPrimary)
+                Spacer(modifier = Modifier.width(DesignTokens.Spacing.xs))
+                Text(
+                    text = "Add Page",
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.SemiBold,
+                    color = CharcoalTextPrimary
+                )
+            }
+
+            // Finish and Read
+            Button(
+                onClick = {
+                    viewModel.runOcrAndFinish { docId ->
+                        onOcrCompleted(docId)
+                    }
+                },
+                enabled = bitmap != null && !uiState.isOcrProcessing,
+                modifier = Modifier
+                    .weight(1.2f)
+                    .height(DesignTokens.buttonHeight),
+                shape = MaterialTheme.shapes.medium,
+                colors = ButtonDefaults.buttonColors(containerColor = TerracottaAccent)
+            ) {
+                Icon(Icons.Default.MenuBook, contentDescription = null, tint = Color.White)
+                Spacer(modifier = Modifier.width(DesignTokens.Spacing.xs))
+                Text(
+                    text = if (totalScanned > 0) "Read All ($totalScanned+)" else stringResource(R.string.crop_btn_ocr),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.White
+                )
+            }
         }
     }
 }

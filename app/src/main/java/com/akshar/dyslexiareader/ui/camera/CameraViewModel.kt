@@ -10,6 +10,7 @@ import com.akshar.dyslexiareader.data.local.entity.DocumentEntity
 import com.akshar.dyslexiareader.data.repository.UserPreferencesRepository
 import com.akshar.dyslexiareader.domain.ocr.OcrEngine
 import com.akshar.dyslexiareader.domain.repository.DocumentRepository
+import com.akshar.dyslexiareader.domain.util.TextCleanupUtil
 import com.akshar.dyslexiareader.domain.util.UnicodeIndicTextUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
@@ -21,6 +22,12 @@ import kotlinx.coroutines.launch
 import java.util.UUID
 import javax.inject.Inject
 
+data class ScannedPage(
+    val pageNumber: Int,
+    val bitmap: Bitmap,
+    val extractedText: String
+)
+
 data class CameraUiState(
     val isTorchOn: Boolean = false,
     val capturedImageUri: Uri? = null,
@@ -31,7 +38,9 @@ data class CameraUiState(
     val normalizedCropRect: RectF = RectF(0.05f, 0.05f, 0.95f, 0.95f),
     val isOcrProcessing: Boolean = false,
     val ocrErrorMessage: String? = null,
-    val scannedDocumentId: String? = null
+    val scannedDocumentId: String? = null,
+    val scannedPages: List<ScannedPage> = emptyList(),
+    val currentPageIndex: Int = 1
 )
 
 @HiltViewModel
@@ -98,7 +107,10 @@ class CameraViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(normalizedCropRect = rect)
     }
 
-    fun runOcrOnCroppedImage(onSuccess: (String) -> Unit) {
+    /**
+     * Runs OCR on the current page and saves the complete document (single or multi-page).
+     */
+    fun runOcrAndFinish(onSuccess: (String) -> Unit) {
         val bitmap = _uiState.value.processedBitmap ?: return
         val cropRect = _uiState.value.normalizedCropRect
 
@@ -108,30 +120,44 @@ class CameraViewModel @Inject constructor(
                 val cropped = BitmapUtil.cropBitmap(bitmap, cropRect)
                 val ocrResult = ocrEngine.recognizeText(cropped)
 
-                if (ocrResult.text.isBlank()) {
+                if (ocrResult.text.isBlank() && _uiState.value.scannedPages.isEmpty()) {
                     _uiState.value = _uiState.value.copy(
                         isOcrProcessing = false,
-                        ocrErrorMessage = "We couldn't find clear text on that page. Let's try taking another photo in brighter light."
+                        ocrErrorMessage = "We couldn't find clear text on that page. That photo was a bit blurry. Let's try again in brighter light."
                     )
                     return@launch
                 }
 
-                val parsed = UnicodeIndicTextUtil.parseReaderText(ocrResult.text)
+                val currentText = ocrResult.text.ifBlank { "" }
+                val currentPage = ScannedPage(
+                    pageNumber = _uiState.value.scannedPages.size + 1,
+                    bitmap = cropped,
+                    extractedText = currentText
+                )
+
+                val allPages = _uiState.value.scannedPages + listOf(currentPage)
+
+                // Combine text from all pages
+                val combinedRawText = allPages.joinToString("\n\n--- Page Break ---\n\n") { it.extractedText }
+                val cleanedCombinedText = TextCleanupUtil.cleanupOcrText(combinedRawText)
+
+                val parsed = UnicodeIndicTextUtil.parseReaderText(cleanedCombinedText)
                 val settings = preferencesRepository.userSettingsFlow.first()
                 val profileId = settings.activeProfileId ?: "default_profile"
                 val docId = UUID.randomUUID().toString()
 
-                // Generate clean, readable title from first few words or default
+                // Generate title from first words of the document
                 val firstWords = parsed.allWords.take(5).joinToString(" ") { it.word }
-                val title = if (firstWords.isNotBlank()) firstWords else "Scanned Page"
+                val title = if (firstWords.isNotBlank()) firstWords else "Textbook Lesson"
 
-                val file = BitmapUtil.saveBitmapToLocalCache(context, cropped, "doc_$docId.jpg")
+                // Save first page image preview
+                val file = BitmapUtil.saveBitmapToLocalCache(context, allPages.first().bitmap, "doc_$docId.jpg")
 
                 val document = DocumentEntity(
                     id = docId,
                     childProfileId = profileId,
                     title = title,
-                    rawOcrText = ocrResult.text,
+                    rawOcrText = combinedRawText,
                     cleanText = parsed.fullText,
                     detectedScript = parsed.script.name,
                     imagePath = file.absolutePath,
@@ -143,9 +169,49 @@ class CameraViewModel @Inject constructor(
                 documentRepository.saveDocument(document)
                 _uiState.value = _uiState.value.copy(
                     isOcrProcessing = false,
-                    scannedDocumentId = docId
+                    scannedDocumentId = docId,
+                    scannedPages = emptyList()
                 )
                 onSuccess(docId)
+            } catch (e: Exception) {
+                _uiState.value = _uiState.value.copy(
+                    isOcrProcessing = false,
+                    ocrErrorMessage = "That photo was a bit blurry. Let's try again."
+                )
+            }
+        }
+    }
+
+    /**
+     * Adds the current cropped page to the document and prepares for scanning another page.
+     */
+    fun addCurrentPageAndScanAnother(onNavigateToCamera: () -> Unit) {
+        val bitmap = _uiState.value.processedBitmap ?: return
+        val cropRect = _uiState.value.normalizedCropRect
+
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(isOcrProcessing = true, ocrErrorMessage = null)
+            try {
+                val cropped = BitmapUtil.cropBitmap(bitmap, cropRect)
+                val ocrResult = ocrEngine.recognizeText(cropped)
+
+                val page = ScannedPage(
+                    pageNumber = _uiState.value.scannedPages.size + 1,
+                    bitmap = cropped,
+                    extractedText = ocrResult.text
+                )
+
+                _uiState.value = _uiState.value.copy(
+                    scannedPages = _uiState.value.scannedPages + listOf(page),
+                    currentPageIndex = _uiState.value.scannedPages.size + 2,
+                    capturedBitmap = null,
+                    processedBitmap = null,
+                    capturedImageUri = null,
+                    isOcrProcessing = false,
+                    rotationDegrees = 0f,
+                    isContrastEnhanced = false
+                )
+                onNavigateToCamera()
             } catch (e: Exception) {
                 _uiState.value = _uiState.value.copy(
                     isOcrProcessing = false,
