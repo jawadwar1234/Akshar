@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <group
+        android:scaleX="0.6"
+        android:scaleY="0.6"
+        android:translateX="21.6"
+        android:translateY="21.6">
+        <!-- Open Book outline -->
+        <path
+            android:fillColor="#C85A32"
+            android:pathData="M18,2C13.58,2 10,5.58 10,10v72c0,3.31 2.69,6 6,6 4.42,0 8,-3.58 8,-8V10C24,5.58 20.42,2 18,2z" />
+        <path
+            android:fillColor="#2D7A78"
+            android:pathData="M90,2c-2.42,0 -6,3.58 -6,8v70c0,4.42 3.58,8 8,8 3.31,0 6,-2.69 6,-6V10C98,5.58 94.42,2 90,2z" />
+        <path
+            android:fillColor="#2B2B2B"
+            android:pathData="M21,12h30c3.87,0 7,3.13 7,7v62c-3.5,-2 -7.5,-3 -12,-3 -9.94,0 -18.84,4.95 -25,12.5V16c0,-2.21 1.79,-4 4,-4z" />
+        <path
+            android:fillColor="#2B2B2B"
+            android:pathData="M87,12H57c-3.87,0 -7,3.13 -7,7v62c3.5,-2 7.5,-3 12,-3 9.94,0 18.84,4.95 25,12.5V16c0,-2.21 -1.79,-4 -4,-4z" />
+    </group>
+</vector>
