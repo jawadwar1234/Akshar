@@ -104,6 +104,21 @@ object BitmapUtil {
     }
 
     /**
+     * Saves processed bitmap to app's local private internal storage directory.
+     * Keeps images safe and persistent in app-private storage across app restarts.
+     */
+    fun saveBitmapToAppPrivateStorage(context: Context, bitmap: Bitmap, fileName: String): File {
+        val scansDir = File(context.filesDir, "scanned_documents").apply {
+            if (!exists()) mkdirs()
+        }
+        val file = File(scansDir, fileName)
+        FileOutputStream(file).use { out ->
+            bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out)
+        }
+        return file
+    }
+
+    /**
      * Saves processed bitmap to app's local private cache directory.
      */
     fun saveBitmapToLocalCache(context: Context, bitmap: Bitmap, fileName: String): File {

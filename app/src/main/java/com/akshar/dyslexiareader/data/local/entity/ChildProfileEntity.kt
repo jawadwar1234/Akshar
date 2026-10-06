@@ -34,3 +34,5 @@ data class ChildProfileEntity(
     val isSynced: Boolean = false,
     val isDeleted: Boolean = false
 )
+
+typealias ProfileEntity = ChildProfileEntity

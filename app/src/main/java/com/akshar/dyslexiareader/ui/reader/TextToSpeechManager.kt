@@ -1,10 +1,14 @@
 package com.akshar.dyslexiareader.ui.reader
 
 import android.content.Context
+import android.content.Intent
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import com.akshar.dyslexiareader.domain.model.SupportedScript
+import com.akshar.dyslexiareader.domain.util.PhonicsSyllableUtil
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -21,7 +25,9 @@ data class TtsPlaybackState(
     val currentWordCharLength: Int = 0,
     val speechRate: Float = 1.0f,
     val speechPitch: Float = 1.0f,
-    val isVoiceAvailable: Boolean = true
+    val isVoiceAvailable: Boolean = true,
+    val isRangeStartSupported: Boolean = true,
+    val missingLanguageName: String? = null
 )
 
 @Singleton
@@ -31,6 +37,7 @@ class TextToSpeechManager @Inject constructor(
 
     private var tts: TextToSpeech? = null
     private var isInitialized = false
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     private val _playbackState = MutableStateFlow(TtsPlaybackState())
     val playbackState: StateFlow<TtsPlaybackState> = _playbackState.asStateFlow()
@@ -38,6 +45,7 @@ class TextToSpeechManager @Inject constructor(
     private var sentenceList: List<String> = emptyList()
     private var sentenceCharOffsets: List<Int> = emptyList()
     private var currentScript: SupportedScript = SupportedScript.LATIN
+    private var isSlowSyllableSpeaking = false
 
     init {
         tts = TextToSpeech(context, this)
@@ -47,7 +55,7 @@ class TextToSpeechManager @Inject constructor(
         if (status == TextToSpeech.SUCCESS) {
             isInitialized = true
             setupUtteranceListener()
-            applyLocale(currentScript.primaryLocale)
+            checkAndApplyLanguage(currentScript.primaryLocale)
         }
     }
 
@@ -58,9 +66,17 @@ class TextToSpeechManager @Inject constructor(
             }
 
             override fun onDone(utteranceId: String?) {
+                if (isSlowSyllableSpeaking) {
+                    isSlowSyllableSpeaking = false
+                    return
+                }
                 val nextIndex = _playbackState.value.currentSentenceIndex + 1
                 if (nextIndex < sentenceList.size) {
-                    _playbackState.value = _playbackState.value.copy(currentSentenceIndex = nextIndex)
+                    _playbackState.value = _playbackState.value.copy(
+                        currentSentenceIndex = nextIndex,
+                        currentWordCharStart = if (nextIndex < sentenceCharOffsets.size) sentenceCharOffsets[nextIndex] else -1,
+                        currentWordCharLength = 0
+                    )
                     speakSentence(nextIndex)
                 } else {
                     stop()
@@ -76,6 +92,7 @@ class TextToSpeechManager @Inject constructor(
                 val sentenceIdx = _playbackState.value.currentSentenceIndex
                 val offset = if (sentenceIdx < sentenceCharOffsets.size) sentenceCharOffsets[sentenceIdx] else 0
                 _playbackState.value = _playbackState.value.copy(
+                    isRangeStartSupported = true,
                     currentWordCharStart = offset + start,
                     currentWordCharLength = end - start
                 )
@@ -85,11 +102,32 @@ class TextToSpeechManager @Inject constructor(
 
     fun prepareText(sentences: List<String>, charOffsets: List<Int>, script: SupportedScript) {
         stop()
-        this.sentenceList = sentences
+        this.sentenceList = chunkLongSentences(sentences)
         this.sentenceCharOffsets = charOffsets
         this.currentScript = script
-        applyLocale(script.primaryLocale)
+        checkAndApplyLanguage(script.primaryLocale)
         _playbackState.value = _playbackState.value.copy(currentSentenceIndex = 0)
+    }
+
+    /**
+     * Chunks text into utterances under the engine's max speech input length.
+     */
+    private fun chunkLongSentences(sentences: List<String>): List<String> {
+        val maxLength = 3900 // Well under Android TTS limit of 4000 chars
+        val chunked = mutableListOf<String>()
+        for (s in sentences) {
+            if (s.length <= maxLength) {
+                chunked.add(s)
+            } else {
+                var start = 0
+                while (start < s.length) {
+                    val end = (start + maxLength).coerceAtMost(s.length)
+                    chunked.add(s.substring(start, end))
+                    start = end
+                }
+            }
+        }
+        return chunked
     }
 
     fun play() {
@@ -137,9 +175,39 @@ class TextToSpeechManager @Inject constructor(
         }
     }
 
+    /**
+     * Tap to hear word at normal reading rate.
+     */
     fun speakWord(word: String, script: SupportedScript = currentScript) {
-        applyLocale(script.primaryLocale)
+        checkAndApplyLanguage(script.primaryLocale)
+        tts?.setSpeechRate(_playbackState.value.speechRate)
         tts?.speak(word, TextToSpeech.QUEUE_FLUSH, null, "single_word_${System.currentTimeMillis()}")
+    }
+
+    /**
+     * Long-press to hear word slowly, syllable by syllable.
+     */
+    fun speakWordSlowlySyllables(word: String, script: SupportedScript = currentScript) {
+        checkAndApplyLanguage(script.primaryLocale)
+        val syllables = PhonicsSyllableUtil.breakIntoSyllables(word, script.primaryLocale)
+        if (syllables.isEmpty()) return
+
+        isSlowSyllableSpeaking = true
+        tts?.stop()
+        tts?.setSpeechRate(0.6f) // Slower pace for sounding out phonics
+
+        syllables.forEachIndexed { index, syllable ->
+            mainHandler.postDelayed({
+                val queueMode = if (index == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
+                tts?.speak(syllable, queueMode, null, "syllable_${index}_${System.currentTimeMillis()}")
+                // Return speech rate back after final syllable
+                if (index == syllables.size - 1) {
+                    mainHandler.postDelayed({
+                        tts?.setSpeechRate(_playbackState.value.speechRate)
+                    }, 500)
+                }
+            }, (index * 600L))
+        }
     }
 
     fun setSpeechRate(rate: Float) {
@@ -158,11 +226,44 @@ class TextToSpeechManager @Inject constructor(
         tts?.speak(sentence, TextToSpeech.QUEUE_FLUSH, null, "utterance_$index")
     }
 
-    private fun applyLocale(locale: Locale) {
+    fun checkAndApplyLanguage(locale: Locale) {
         if (!isInitialized) return
-        val result = tts?.setLanguage(locale)
-        val isAvail = result != TextToSpeech.LANG_MISSING_DATA && result != TextToSpeech.LANG_NOT_SUPPORTED
-        _playbackState.value = _playbackState.value.copy(isVoiceAvailable = isAvail)
+        val avail = tts?.isLanguageAvailable(locale) ?: TextToSpeech.LANG_NOT_SUPPORTED
+        val isSupported = avail >= TextToSpeech.LANG_AVAILABLE
+
+        if (isSupported) {
+            tts?.setLanguage(locale)
+            _playbackState.value = _playbackState.value.copy(
+                isVoiceAvailable = true,
+                missingLanguageName = null
+            )
+        } else {
+            _playbackState.value = _playbackState.value.copy(
+                isVoiceAvailable = false,
+                missingLanguageName = locale.displayLanguage
+            )
+        }
+    }
+
+    /**
+     * Opens system Text-To-Speech settings to allow user to install voice packs.
+     */
+    fun openTtsSettings() {
+        try {
+            val intent = Intent("com.android.settings.TTS_SETTINGS").apply {
+                flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            }
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            try {
+                val intent = Intent(TextToSpeech.Engine.ACTION_INSTALL_TTS_DATA).apply {
+                    flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                }
+                context.startActivity(intent)
+            } catch (e2: Exception) {
+                // Ignore gracefully
+            }
+        }
     }
 
     fun shutdown() {

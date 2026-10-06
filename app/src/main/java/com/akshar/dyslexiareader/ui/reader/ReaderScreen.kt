@@ -1,10 +1,12 @@
 package com.akshar.dyslexiareader.ui.reader
 
 import android.graphics.BitmapFactory
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,8 +24,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Compare
+import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Fullscreen
 import androidx.compose.material.icons.filled.FullscreenExit
@@ -51,6 +55,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -61,6 +66,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -69,6 +75,8 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import com.akshar.dyslexiareader.R
 import com.akshar.dyslexiareader.domain.model.SentenceSpan
 import com.akshar.dyslexiareader.domain.model.SupportedScript
@@ -93,8 +101,24 @@ fun ReaderScreen(
     onNavigateBack: () -> Unit,
     onNavigateToPractice: (String, String) -> Unit
 ) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+
     LaunchedEffect(documentId) {
         viewModel.loadDocument(documentId)
+    }
+
+    // Clean pause on backgrounding or phone calls
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_PAUSE || event == Lifecycle.Event.ON_STOP) {
+                viewModel.pauseTts()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+            viewModel.stopTts()
+        }
     }
 
     val uiState by viewModel.uiState.collectAsState()
@@ -122,7 +146,7 @@ fun ReaderScreen(
                                 onNavigateBack()
                             }) {
                                 Icon(
-                                    imageVector = Icons.Default.ArrowBack,
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                                     contentDescription = stringResource(R.string.action_back),
                                     tint = theme.textPrimary
                                 )
@@ -216,109 +240,161 @@ fun ReaderScreen(
                     )
                     .background(theme.background)
             ) {
-                if (uiState.isEditMode) {
-                    // Edit Mode view
-                    EditModeCanvas(
-                        draftText = uiState.editableDraftText,
-                        onTextChange = viewModel::updateDraftText,
-                        onSave = viewModel::saveEditedText,
-                        onCancel = viewModel::toggleEditMode,
-                        theme = theme
-                    )
-                } else if (uiState.isBeforeAfterSplit && uiState.document?.imagePath != null) {
-                    // Before / After side-by-side view
-                    Row(modifier = Modifier.fillMaxSize()) {
-                        // Original Photo Side
-                        Box(
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // Missing Voice Banner if voice not installed on device
+                    if (!ttsState.isVoiceAvailable) {
+                        Card(
                             modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .background(Color.Black.copy(alpha = 0.05f))
-                                .border(1.dp, theme.borderColor),
-                            contentAlignment = Alignment.Center
+                                .fillMaxWidth()
+                                .padding(DesignTokens.Spacing.md)
+                                .border(1.dp, TerracottaAccent.copy(alpha = 0.4f), MaterialTheme.shapes.medium),
+                            colors = CardDefaults.cardColors(containerColor = theme.surface)
                         ) {
-                            val imageFile = remember(uiState.document?.imagePath) {
-                                File(uiState.document!!.imagePath!!)
-                            }
-                            if (imageFile.exists()) {
-                                val bitmap = remember(imageFile) {
-                                    BitmapFactory.decodeFile(imageFile.absolutePath)
-                                }
-                                if (bitmap != null) {
-                                    Image(
-                                        bitmap = bitmap.asImageBitmap(),
-                                        contentDescription = "Original textbook page photo",
-                                        contentScale = ContentScale.Fit,
-                                        modifier = Modifier.fillMaxSize().padding(DesignTokens.Spacing.xs)
+                            Row(
+                                modifier = Modifier.padding(DesignTokens.Spacing.md),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = "Voice data needed for ${ttsState.missingLanguageName ?: "this language"}",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.Bold,
+                                        color = CharcoalTextPrimary
                                     )
+                                    Text(
+                                        text = "Install the voice pack to listen to this book page aloud.",
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = CharcoalTextSecondary
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(DesignTokens.Spacing.sm))
+                                OutlinedButton(
+                                    onClick = { viewModel.ttsManager.openTtsSettings() },
+                                    shape = MaterialTheme.shapes.medium
+                                ) {
+                                    Icon(Icons.Default.Download, contentDescription = null, modifier = Modifier.size(16.dp))
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text("Install", style = MaterialTheme.typography.labelMedium)
                                 }
                             }
                         }
+                    }
 
-                        // Dyslexia Text Side
-                        Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                    Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+                        if (uiState.isEditMode) {
+                            // Edit Mode view
+                            EditModeCanvas(
+                                draftText = uiState.editableDraftText,
+                                onTextChange = viewModel::updateDraftText,
+                                onSave = viewModel::saveEditedText,
+                                onCancel = viewModel::toggleEditMode,
+                                theme = theme
+                            )
+                        } else if (uiState.isBeforeAfterSplit && uiState.document?.imagePath != null) {
+                            // Before / After side-by-side view
+                            Row(modifier = Modifier.fillMaxSize()) {
+                                // Original Photo Side
+                                Box(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .fillMaxHeight()
+                                        .background(Color.Black.copy(alpha = 0.05f))
+                                        .border(1.dp, theme.borderColor),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    val imageFile = remember(uiState.document?.imagePath) {
+                                        File(uiState.document!!.imagePath!!)
+                                    }
+                                    if (imageFile.exists()) {
+                                        val bitmap = remember(imageFile) {
+                                            BitmapFactory.decodeFile(imageFile.absolutePath)
+                                        }
+                                        if (bitmap != null) {
+                                            Image(
+                                                bitmap = bitmap.asImageBitmap(),
+                                                contentDescription = "Original textbook page photo",
+                                                contentScale = ContentScale.Fit,
+                                                modifier = Modifier.fillMaxSize().padding(DesignTokens.Spacing.xs)
+                                            )
+                                        }
+                                    }
+                                }
+
+                                // Dyslexia Text Side
+                                Box(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                                    ReaderTextCanvas(
+                                        uiState = uiState,
+                                        userSettings = userSettings,
+                                        ttsState = ttsState,
+                                        theme = theme,
+                                        onWordClicked = { wordSpan -> viewModel.inspectWord(wordSpan) },
+                                        onWordLongClicked = { wordSpan ->
+                                            val script = uiState.parsedText?.script ?: SupportedScript.LATIN
+                                            viewModel.ttsManager.speakWordSlowlySyllables(wordSpan.cleanWord, script)
+                                        },
+                                        onSentenceClick = { sIdx -> viewModel.jumpToSentence(sIdx) }
+                                    )
+                                }
+                            }
+                        } else {
+                            // Standard Dyslexia Reading Canvas
                             ReaderTextCanvas(
                                 uiState = uiState,
                                 userSettings = userSettings,
                                 ttsState = ttsState,
                                 theme = theme,
                                 onWordClicked = { wordSpan -> viewModel.inspectWord(wordSpan) },
+                                onWordLongClicked = { wordSpan ->
+                                    val script = uiState.parsedText?.script ?: SupportedScript.LATIN
+                                    viewModel.ttsManager.speakWordSlowlySyllables(wordSpan.cleanWord, script)
+                                },
                                 onSentenceClick = { sIdx -> viewModel.jumpToSentence(sIdx) }
                             )
                         }
-                    }
-                } else {
-                    // Standard Dyslexia Reading Canvas
-                    ReaderTextCanvas(
-                        uiState = uiState,
-                        userSettings = userSettings,
-                        ttsState = ttsState,
-                        theme = theme,
-                        onWordClicked = { wordSpan -> viewModel.inspectWord(wordSpan) },
-                        onSentenceClick = { sIdx -> viewModel.jumpToSentence(sIdx) }
-                    )
-                }
 
-                // Reading Ruler Overlay if toggled
-                if (uiState.isRulerActive && !uiState.isEditMode) {
-                    ReadingRulerOverlay(
-                        windowLines = userSettings.rulerWindowLines
-                    )
-                }
-
-                // Minimal floating controls when in Full-Screen mode
-                if (uiState.isFullScreen) {
-                    Row(
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(DesignTokens.Spacing.lg),
-                        horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.sm)
-                    ) {
-                        FloatingActionButton(
-                            onClick = { if (ttsState.isPlaying) viewModel.pauseTts() else viewModel.playTts() },
-                            containerColor = TerracottaAccent,
-                            contentColor = Color.White
-                        ) {
-                            Icon(
-                                imageVector = if (ttsState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
-                                contentDescription = "Play/Pause"
+                        // Reading Ruler Overlay if toggled
+                        if (uiState.isRulerActive && !uiState.isEditMode) {
+                            ReadingRulerOverlay(
+                                windowLines = userSettings.rulerWindowLines
                             )
                         }
 
-                        FloatingActionButton(
-                            onClick = viewModel::openTextSettings,
-                            containerColor = theme.surface,
-                            contentColor = theme.textPrimary
-                        ) {
-                            Icon(Icons.Default.Settings, contentDescription = "Settings")
-                        }
+                        // Minimal floating controls when in Full-Screen mode
+                        if (uiState.isFullScreen) {
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(DesignTokens.Spacing.lg),
+                                horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.sm)
+                            ) {
+                                FloatingActionButton(
+                                    onClick = { if (ttsState.isPlaying) viewModel.pauseTts() else viewModel.playTts() },
+                                    containerColor = TerracottaAccent,
+                                    contentColor = Color.White
+                                ) {
+                                    Icon(
+                                        imageVector = if (ttsState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                        contentDescription = "Play/Pause"
+                                    )
+                                }
 
-                        FloatingActionButton(
-                            onClick = viewModel::toggleFullScreen,
-                            containerColor = theme.surface,
-                            contentColor = theme.textPrimary
-                        ) {
-                            Icon(Icons.Default.FullscreenExit, contentDescription = "Exit full screen")
+                                FloatingActionButton(
+                                    onClick = viewModel::openTextSettings,
+                                    containerColor = theme.surface,
+                                    contentColor = theme.textPrimary
+                                ) {
+                                    Icon(Icons.Default.Settings, contentDescription = "Settings")
+                                }
+
+                                FloatingActionButton(
+                                    onClick = viewModel::toggleFullScreen,
+                                    containerColor = theme.surface,
+                                    contentColor = theme.textPrimary
+                                ) {
+                                    Icon(Icons.Default.FullscreenExit, contentDescription = "Exit full screen")
+                                }
+                            }
                         }
                     }
                 }
@@ -327,9 +403,11 @@ fun ReaderScreen(
 
         // Word Inspection Dialog
         if (uiState.selectedWordForInspection != null) {
+            val script = uiState.parsedText?.script ?: SupportedScript.LATIN
             WordInspectionDialog(
                 wordSpan = uiState.selectedWordForInspection!!,
-                onSpeakWord = { w -> viewModel.ttsManager.speakWord(w) },
+                onSpeakWord = { w -> viewModel.ttsManager.speakWord(w, script) },
+                onSpeakWordSlowly = { w -> viewModel.ttsManager.speakWordSlowlySyllables(w, script) },
                 onPracticeWord = { cleanWord ->
                     val docId = uiState.document?.id ?: ""
                     onNavigateToPractice(docId, cleanWord)
@@ -368,6 +446,7 @@ private fun ReaderTextCanvas(
     ttsState: TtsPlaybackState,
     theme: ReaderThemePreset,
     onWordClicked: (WordSpan) -> Unit,
+    onWordLongClicked: (WordSpan) -> Unit,
     onSentenceClick: (Int) -> Unit
 ) {
     val parsed = uiState.parsedText ?: return
@@ -399,6 +478,7 @@ private fun ReaderTextCanvas(
                 chunkColor1 = chunkColor1,
                 chunkColor2 = chunkColor2,
                 onWordClicked = onWordClicked,
+                onWordLongClicked = onWordLongClicked,
                 onSentenceClick = { onSentenceClick(sIdx) }
             )
             Spacer(modifier = Modifier.height((userSettings.fontSize * (userSettings.lineSpacing - 1f)).dp))
@@ -406,11 +486,6 @@ private fun ReaderTextCanvas(
     }
 }
 
-/**
- * Script-Aware Font Selection:
- * If the document contains Indic text (Devanagari, Gujarati, Bengali), OpenDyslexic is NEVER used.
- * Appropriate Google Noto Sans or Lexend is chosen automatically.
- */
 private fun resolveFontForScript(
     selectedFontId: String,
     script: SupportedScript
@@ -442,6 +517,7 @@ private fun SentenceBlock(
     chunkColor1: Color,
     chunkColor2: Color,
     onWordClicked: (WordSpan) -> Unit,
+    onWordLongClicked: (WordSpan) -> Unit,
     onSentenceClick: () -> Unit
 ) {
     Box(
@@ -477,7 +553,8 @@ private fun SentenceBlock(
                     syllablesEnabled = syllablesEnabled,
                     chunkColor1 = chunkColor1,
                     chunkColor2 = chunkColor2,
-                    onClick = { onWordClicked(wordSpan) }
+                    onClick = { onWordClicked(wordSpan) },
+                    onLongClick = { onWordLongClicked(wordSpan) }
                 )
                 Spacer(modifier = Modifier.width((6 + wordSpacingEm * 20).dp))
             }
@@ -485,6 +562,7 @@ private fun SentenceBlock(
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun WordChip(
     wordSpan: WordSpan,
@@ -498,7 +576,8 @@ private fun WordChip(
     syllablesEnabled: Boolean,
     chunkColor1: Color,
     chunkColor2: Color,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    onLongClick: () -> Unit
 ) {
     Box(
         modifier = Modifier
@@ -506,11 +585,13 @@ private fun WordChip(
                 color = if (isWordActive) theme.highlightWordBg else Color.Transparent,
                 shape = MaterialTheme.shapes.small
             )
-            .clickable { onClick() }
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = onLongClick
+            )
             .padding(horizontal = 2.dp, vertical = 1.dp)
     ) {
         if (syllablesEnabled && wordSpan.syllables.size > 1) {
-            // Syllable / Chunk Coloring: alternate soft colour pairs
             val annotated = buildAnnotatedString {
                 wordSpan.syllables.forEachIndexed { idx, syllable ->
                     val color = if (idx % 2 == 0) chunkColor1 else chunkColor2
@@ -527,7 +608,6 @@ private fun WordChip(
                 textAlign = TextAlign.Start
             )
         } else if (bionicEnabled) {
-            // Bionic fixation display: bold initial letters
             val (prefix, suffix) = PhonicsSyllableUtil.splitForBionicFocus(wordSpan.word, script.primaryLocale)
             val annotated = buildAnnotatedString {
                 withStyle(SpanStyle(fontWeight = FontWeight.ExtraBold, color = theme.textPrimary)) {
@@ -545,7 +625,6 @@ private fun WordChip(
                 textAlign = TextAlign.Start
             )
         } else {
-            // Standard left-aligned dyslexia text
             Text(
                 text = wordSpan.word,
                 fontSize = fontSizeSp.sp,
@@ -663,7 +742,7 @@ private fun ReaderBottomBar(
                 )
             }
 
-            // Play / Pause Main Button
+            // Play / Pause Main Button ("Read To Me")
             Button(
                 onClick = {
                     if (ttsState.isPlaying) onPause() else onPlay()
@@ -673,13 +752,13 @@ private fun ReaderBottomBar(
                 colors = ButtonDefaults.buttonColors(containerColor = TerracottaAccent)
             ) {
                 Icon(
-                    imageVector = if (ttsState.isPlaying) Icons.Default.Pause else Icons.Default.PlayArrow,
+                    imageVector = if (ttsState.isPlaying) Icons.Default.Pause else Icons.AutoMirrored.Filled.VolumeUp,
                     contentDescription = null,
                     tint = Color.White
                 )
                 Spacer(modifier = Modifier.width(DesignTokens.Spacing.sm))
                 Text(
-                    text = if (ttsState.isPlaying) stringResource(R.string.reader_btn_pause) else stringResource(R.string.reader_btn_play),
+                    text = if (ttsState.isPlaying) stringResource(R.string.reader_btn_pause) else "Read to Me",
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = Color.White

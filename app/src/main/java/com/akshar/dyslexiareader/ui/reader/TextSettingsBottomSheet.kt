@@ -444,12 +444,22 @@ fun TextSettingsBottomSheet(
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
 
             // 11. TTS Speed & Pitch Controls
-            Text(
-                text = stringResource(R.string.reader_tts_speed),
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = CharcoalTextPrimary
-            )
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = stringResource(R.string.reader_tts_speed),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = CharcoalTextPrimary
+                )
+                Text(
+                    text = String.format("%.1fx", userSettings.ttsSpeed),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CharcoalTextSecondary
+                )
+            }
             Slider(
                 value = userSettings.ttsSpeed,
                 onValueChange = onUpdateTtsSpeed,
@@ -458,6 +468,35 @@ fun TextSettingsBottomSheet(
                 colors = SliderDefaults.colors(
                     thumbColor = CalmTeal,
                     activeTrackColor = CalmTeal
+                )
+            )
+
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.sm))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(
+                    text = "Voice Pitch",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.SemiBold,
+                    color = CharcoalTextPrimary
+                )
+                Text(
+                    text = String.format("%.1fx", userSettings.ttsPitch),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = CharcoalTextSecondary
+                )
+            }
+            Slider(
+                value = userSettings.ttsPitch,
+                onValueChange = onUpdateTtsPitch,
+                valueRange = 0.5f..1.5f,
+                steps = 9,
+                colors = SliderDefaults.colors(
+                    thumbColor = TerracottaAccent,
+                    activeTrackColor = TerracottaAccent
                 )
             )
         }

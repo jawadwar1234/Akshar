@@ -150,8 +150,8 @@ class CameraViewModel @Inject constructor(
                 val firstWords = parsed.allWords.take(5).joinToString(" ") { it.word }
                 val title = if (firstWords.isNotBlank()) firstWords else "Textbook Lesson"
 
-                // Save first page image preview
-                val file = BitmapUtil.saveBitmapToLocalCache(context, allPages.first().bitmap, "doc_$docId.jpg")
+                // Save first page image preview in persistent app-private internal storage
+                val file = BitmapUtil.saveBitmapToAppPrivateStorage(context, allPages.first().bitmap, "doc_$docId.jpg")
 
                 val document = DocumentEntity(
                     id = docId,

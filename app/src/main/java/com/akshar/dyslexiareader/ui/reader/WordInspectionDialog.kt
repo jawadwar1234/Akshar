@@ -15,9 +15,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Hearing
 import androidx.compose.material.icons.filled.RecordVoiceOver
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -44,7 +45,6 @@ import com.akshar.dyslexiareader.ui.theme.CharcoalTextSecondary
 import com.akshar.dyslexiareader.ui.theme.DesignTokens
 import com.akshar.dyslexiareader.ui.theme.PaperCreamBackground
 import com.akshar.dyslexiareader.ui.theme.PaperCreamBorder
-import com.akshar.dyslexiareader.ui.theme.PaperCreamSurface
 import com.akshar.dyslexiareader.ui.theme.TerracottaAccent
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -52,6 +52,7 @@ import com.akshar.dyslexiareader.ui.theme.TerracottaAccent
 fun WordInspectionDialog(
     wordSpan: WordSpan,
     onSpeakWord: (String) -> Unit,
+    onSpeakWordSlowly: (String) -> Unit,
     onPracticeWord: (String) -> Unit,
     onDismiss: () -> Unit
 ) {
@@ -140,42 +141,48 @@ fun WordInspectionDialog(
                     }
                 }
 
-                Spacer(modifier = Modifier.height(DesignTokens.Spacing.lg))
+                Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
 
-                // Actions: Listen & Practice
+                // Actions: Listen Normal, Slow Syllables, Practice
                 Row(
                     modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
+                    horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.sm)
                 ) {
                     OutlinedButton(
                         onClick = { onSpeakWord(wordSpan.cleanWord) },
                         shape = MaterialTheme.shapes.medium,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(DesignTokens.buttonHeight)
+                        modifier = Modifier.weight(1f).height(DesignTokens.buttonHeight)
                     ) {
-                        Icon(Icons.Default.VolumeUp, contentDescription = null, tint = CharcoalTextPrimary)
-                        Spacer(modifier = Modifier.width(DesignTokens.Spacing.xs))
-                        Text(stringResource(R.string.reader_btn_play), color = CharcoalTextPrimary)
+                        Icon(Icons.AutoMirrored.Filled.VolumeUp, contentDescription = null, tint = CharcoalTextPrimary, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Listen", color = CharcoalTextPrimary, style = MaterialTheme.typography.labelMedium)
                     }
 
-                    Spacer(modifier = Modifier.width(DesignTokens.Spacing.md))
-
-                    Button(
-                        onClick = {
-                            onDismiss()
-                            onPracticeWord(wordSpan.cleanWord)
-                        },
+                    OutlinedButton(
+                        onClick = { onSpeakWordSlowly(wordSpan.cleanWord) },
                         shape = MaterialTheme.shapes.medium,
-                        colors = ButtonDefaults.buttonColors(containerColor = TerracottaAccent),
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(DesignTokens.buttonHeight)
+                        modifier = Modifier.weight(1.1f).height(DesignTokens.buttonHeight)
                     ) {
-                        Icon(Icons.Default.RecordVoiceOver, contentDescription = null, tint = Color.White)
-                        Spacer(modifier = Modifier.width(DesignTokens.Spacing.xs))
-                        Text(stringResource(R.string.reader_btn_practice), color = Color.White)
+                        Icon(Icons.Default.Hearing, contentDescription = null, tint = CalmTeal, modifier = Modifier.size(18.dp))
+                        Spacer(modifier = Modifier.width(4.dp))
+                        Text("Slow Sounds", color = CalmTeal, style = MaterialTheme.typography.labelMedium)
                     }
+                }
+
+                Spacer(modifier = Modifier.height(DesignTokens.Spacing.sm))
+
+                Button(
+                    onClick = {
+                        onDismiss()
+                        onPracticeWord(wordSpan.cleanWord)
+                    },
+                    shape = MaterialTheme.shapes.medium,
+                    colors = ButtonDefaults.buttonColors(containerColor = TerracottaAccent),
+                    modifier = Modifier.fillMaxWidth().height(DesignTokens.buttonHeight)
+                ) {
+                    Icon(Icons.Default.RecordVoiceOver, contentDescription = null, tint = Color.White)
+                    Spacer(modifier = Modifier.width(DesignTokens.Spacing.xs))
+                    Text("Practice Saying This Word", color = Color.White, fontWeight = FontWeight.Bold)
                 }
             }
         }
