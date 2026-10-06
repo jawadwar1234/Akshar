@@ -19,3 +19,6 @@ local.properties
 .kotlin
 *.apk
 *.aab
+google-services.json
+*.keystore
+*.jks
