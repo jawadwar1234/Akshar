@@ -61,9 +61,9 @@ androidx-camera-camera2 = { group = "androidx.camera", name = "camera-camera2", 
 androidx-camera-lifecycle = { group = "androidx.camera", name = "camera-lifecycle", version.ref = "camerax" }
 androidx-camera-view = { group = "androidx.camera", name = "camera-view", version.ref = "camerax" }
 
-# ML Kit OCR
-mlkit-text-recognition = { group = "com.google.android.gms", name = "play-services-mlkit-text-recognition", version.ref = "mlkitTextRecognition" }
-mlkit-text-recognition-devanagari = { group = "com.google.android.gms", name = "play-services-mlkit-text-recognition-devanagari", version.ref = "mlkitDevanagari" }
+# ML Kit OCR (On-device bundled)
+mlkit-text-recognition = { group = "com.google.mlkit", name = "text-recognition", version.ref = "mlkitTextRecognition" }
+mlkit-text-recognition-devanagari = { group = "com.google.mlkit", name = "text-recognition-devanagari", version.ref = "mlkitDevanagari" }
 
 # Tesseract (Beta for Gujarati & Bengali)
 tesseract4android = { group = "cz.adaptech.tesseract4android", name = "tesseract4android", version.ref = "tesseract4android" }
@@ -79,9 +79,11 @@ firebase-auth-ktx = { group = "com.google.firebase", name = "firebase-auth-ktx" 
 firebase-firestore-ktx = { group = "com.google.firebase", name = "firebase-firestore-ktx" }
 play-services-auth = { group = "com.google.android.gms", name = "play-services-auth", version.ref = "playServicesAuth" }
 
-# Coroutines
+# Coroutines & Futures
 kotlinx-coroutines-android = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-android", version.ref = "coroutines" }
 kotlinx-coroutines-play-services = { group = "org.jetbrains.kotlinx", name = "kotlinx-coroutines-play-services", version.ref = "coroutines" }
+guava = { group = "com.google.guava", name = "guava", version = "33.3.1-android" }
+androidx-concurrent-futures-ktx = { group = "androidx.concurrent", name = "concurrent-futures-ktx", version = "1.2.0" }
 
 # Desugaring for minSdk 24
 desugar-jdk-libs = { group = "com.android.tools", name = "desugar_jdk_libs", version.ref = "desugarJdkLibs" }

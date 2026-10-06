@@ -134,9 +134,11 @@ dependencies {
     implementation(libs.firebase.firestore.ktx)
     implementation(libs.play.services.auth)
 
-    // Coroutines
+    // Coroutines & Futures
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
+    implementation(libs.guava)
+    implementation(libs.androidx.concurrent.futures.ktx)
 
     // Unit Testing
     testImplementation(libs.junit)
