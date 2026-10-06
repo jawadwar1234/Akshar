@@ -141,4 +141,18 @@
     <string name="settings_delete_confirm_msg">हे या डिव्हाइसवरून आणि क्लाउडवरून सर्व पुस्तके व प्रोफाइल्स कायमचे हटवेल.</string>
     <string name="settings_about">अक्षर डिस्लेक्सिया वाचक बद्दल</string>
     <string name="settings_version">आवृत्ती 1.0.0 (ऑफलाइन प्रथम)</string>
+
+    <!-- Plurals -->
+    <plurals name="words_count">
+        <item quantity="one">%1$d शब्द</item>
+        <item quantity="other">%1$d शब्द</item>
+    </plurals>
+    <plurals name="pages_count">
+        <item quantity="one">%1$d पान</item>
+        <item quantity="other">%1$d पाने</item>
+    </plurals>
+    <plurals name="words_mastered_count">
+        <item quantity="one">%1$d शब्द शिकलात</item>
+        <item quantity="other">%1$d शब्द शिकलात</item>
+    </plurals>
 </resources>

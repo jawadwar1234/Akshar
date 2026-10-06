@@ -603,6 +603,7 @@ private fun WordChip(
             Text(
                 text = annotated,
                 fontSize = fontSizeSp.sp,
+                lineHeight = (fontSizeSp * 1.6f).sp,
                 fontFamily = fontOption.fontFamily,
                 letterSpacing = letterSpacingEm.sp,
                 textAlign = TextAlign.Start
@@ -620,6 +621,7 @@ private fun WordChip(
             Text(
                 text = annotated,
                 fontSize = fontSizeSp.sp,
+                lineHeight = (fontSizeSp * 1.6f).sp,
                 fontFamily = fontOption.fontFamily,
                 letterSpacing = letterSpacingEm.sp,
                 textAlign = TextAlign.Start
@@ -628,6 +630,7 @@ private fun WordChip(
             Text(
                 text = wordSpan.word,
                 fontSize = fontSizeSp.sp,
+                lineHeight = (fontSizeSp * 1.6f).sp,
                 fontFamily = fontOption.fontFamily,
                 fontWeight = FontWeight.Normal,
                 color = theme.textPrimary,

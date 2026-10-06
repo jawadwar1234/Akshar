@@ -141,4 +141,18 @@
     <string name="settings_delete_confirm_msg">এটি এই ডিভাইস এবং ক্লাউড থেকে স্থায়ীভাবে সমস্ত বই ও প্রোফাইল মুছে ফেলবে।</string>
     <string name="settings_about">অক্ষর ডিসলেক্সিয়া রিডার সম্পর্কে</string>
     <string name="settings_version">সংস্করণ ১.০.০ (অফলাইন প্রথম)</string>
+
+    <!-- Plurals -->
+    <plurals name="words_count">
+        <item quantity="one">%1$dটি শব্দ</item>
+        <item quantity="other">%1$dটি শব্দ</item>
+    </plurals>
+    <plurals name="pages_count">
+        <item quantity="one">%1$dটি পৃষ্ঠা</item>
+        <item quantity="other">%1$dটি পৃষ্ঠা</item>
+    </plurals>
+    <plurals name="words_mastered_count">
+        <item quantity="one">%1$dটি শব্দ আয়ত্ত হয়েছে</item>
+        <item quantity="other">%1$dটি শব্দ আয়ত্ত হয়েছে</item>
+    </plurals>
 </resources>

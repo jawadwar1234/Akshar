@@ -141,4 +141,18 @@
     <string name="settings_delete_confirm_msg">यह इस डिवाइस और क्लाउड से सभी पृष्ठों और प्रोफ़ाइलों को हमेशा के लिए हटा देगा। यह कार्रवाई वापस नहीं ली जा सकती।</string>
     <string name="settings_about">अक्षर डिस्लेक्सिया रीडर के बारे में</string>
     <string name="settings_version">संस्करण 1.0.0 (ऑफ़लाइन प्रथम)</string>
+
+    <!-- Plurals -->
+    <plurals name="words_count">
+        <item quantity="one">%1$d शब्द</item>
+        <item quantity="other">%1$d शब्द</item>
+    </plurals>
+    <plurals name="pages_count">
+        <item quantity="one">%1$d पृष्ठ</item>
+        <item quantity="other">%1$d पृष्ठ</item>
+    </plurals>
+    <plurals name="words_mastered_count">
+        <item quantity="one">%1$d शब्द सीखा</item>
+        <item quantity="other">%1$d शब्द सीखे</item>
+    </plurals>
 </resources>

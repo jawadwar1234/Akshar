@@ -141,4 +141,18 @@
     <string name="settings_delete_confirm_msg">આ ઉપકરણ અને ક્લાઉડમાંથી તમામ પુસ્તકો અને પ્રોફાઇલ્સ કાયમ માટે કાઢી નાખવામાં આવશે.</string>
     <string name="settings_about">અક્ષર ડિસ્લેક્સિયા રીડર વિશે</string>
     <string name="settings_version">આવૃત્તિ 1.0.0 (ઑફલાઇન પ્રથમ)</string>
+
+    <!-- Plurals -->
+    <plurals name="words_count">
+        <item quantity="one">%1$d શબ્દ</item>
+        <item quantity="other">%1$d શબ્દો</item>
+    </plurals>
+    <plurals name="pages_count">
+        <item quantity="one">%1$d પાનું</item>
+        <item quantity="other">%1$d પાનાં</item>
+    </plurals>
+    <plurals name="words_mastered_count">
+        <item quantity="one">%1$d શબ્દ શીખ્યા</item>
+        <item quantity="other">%1$d શબ્દો શીખ્યા</item>
+    </plurals>
 </resources>
