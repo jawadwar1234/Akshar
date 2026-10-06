@@ -2,6 +2,7 @@ package com.akshar.dyslexiareader.ui.auth
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -161,6 +162,41 @@ fun AuthScreen(
             shape = MaterialTheme.shapes.medium
         )
 
+        Spacer(modifier = Modifier.height(DesignTokens.Spacing.sm))
+
+        // Remember this device checkbox + Forgot password row
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.clickable { viewModel.toggleRememberThisDevice() }
+            ) {
+                androidx.compose.material3.Checkbox(
+                    checked = state.rememberThisDevice,
+                    onCheckedChange = { viewModel.toggleRememberThisDevice() },
+                    colors = androidx.compose.material3.CheckboxDefaults.colors(checkedColor = TerracottaAccent)
+                )
+                Text(
+                    text = "Remember this device",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = CharcoalTextPrimary
+                )
+            }
+
+            if (!state.isRegisterMode) {
+                TextButton(onClick = viewModel::openForgotPasswordDialog) {
+                    Text(
+                        text = "Forgot password?",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = CalmTeal
+                    )
+                }
+            }
+        }
+
         if (state.errorMessage != null) {
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.sm))
             Text(
@@ -170,7 +206,7 @@ fun AuthScreen(
             )
         }
 
-        Spacer(modifier = Modifier.height(DesignTokens.Spacing.lg))
+        Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
 
         // Submit Button
         Button(
@@ -270,5 +306,57 @@ fun AuthScreen(
         )
 
         Spacer(modifier = Modifier.height(DesignTokens.Spacing.xl))
+    }
+
+    if (state.showForgotPasswordDialog) {
+        androidx.compose.material3.AlertDialog(
+            onDismissRequest = viewModel::closeForgotPasswordDialog,
+            title = {
+                Text(
+                    text = "Reset Your Password",
+                    color = CharcoalTextPrimary,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Column {
+                    Text(
+                        text = "Enter your email address and we'll send you a simple, friendly link to reset your secret password.",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = CharcoalTextSecondary
+                    )
+                    Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
+                    OutlinedTextField(
+                        value = state.forgotPasswordEmail,
+                        onValueChange = viewModel::onForgotPasswordEmailChange,
+                        label = { Text("Email Address") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                    if (state.passwordResetSentMessage != null) {
+                        Spacer(modifier = Modifier.height(DesignTokens.Spacing.sm))
+                        Text(
+                            text = state.passwordResetSentMessage ?: "",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CalmTeal
+                        )
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = viewModel::sendPasswordResetEmail,
+                    colors = ButtonDefaults.buttonColors(containerColor = TerracottaAccent)
+                ) {
+                    Text("Send Reset Link", color = Color.White)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = viewModel::closeForgotPasswordDialog) {
+                    Text("Close")
+                }
+            },
+            containerColor = PaperCreamBackground
+        )
     }
 }

@@ -24,6 +24,8 @@ data class ProfilesUiState(
     val enteredNumericPin: String = "",
     val enteredPicturePinIcons: List<String> = emptyList(),
     val pinErrorMessage: String? = null,
+    val failedAttempts: Int = 0,
+    val lockoutRemainingSeconds: Int = 0,
     val isUnlockSuccess: Boolean = false,
     val isAddProfileDialogOpen: Boolean = false,
     val exportStatusMessage: String? = null
@@ -63,6 +65,7 @@ class ProfilesViewModel @Inject constructor(
     }
 
     fun onNumericPinDigit(digit: String) {
+        if (_uiState.value.lockoutRemainingSeconds > 0) return
         val current = _uiState.value.enteredNumericPin
         if (current.length < 4) {
             val updated = current + digit
@@ -74,6 +77,7 @@ class ProfilesViewModel @Inject constructor(
     }
 
     fun onNumericPinBackspace() {
+        if (_uiState.value.lockoutRemainingSeconds > 0) return
         val current = _uiState.value.enteredNumericPin
         if (current.isNotEmpty()) {
             _uiState.value = _uiState.value.copy(
@@ -84,6 +88,7 @@ class ProfilesViewModel @Inject constructor(
     }
 
     fun onPicturePinIconSelected(iconId: String) {
+        if (_uiState.value.lockoutRemainingSeconds > 0) return
         val current = _uiState.value.enteredPicturePinIcons
         if (current.size < 3) {
             val updated = current + iconId
@@ -98,22 +103,56 @@ class ProfilesViewModel @Inject constructor(
     }
 
     fun clearPicturePin() {
+        if (_uiState.value.lockoutRemainingSeconds > 0) return
         _uiState.value = _uiState.value.copy(
             enteredPicturePinIcons = emptyList(),
             pinErrorMessage = null
         )
     }
 
+    private fun handleWrongAttempt(gentleMessage: String) {
+        val attempts = _uiState.value.failedAttempts + 1
+        if (attempts >= 5) {
+            _uiState.value = _uiState.value.copy(
+                enteredNumericPin = "",
+                enteredPicturePinIcons = emptyList(),
+                failedAttempts = attempts,
+                lockoutRemainingSeconds = 30,
+                pinErrorMessage = "Let's take a quick breather! You can try your PIN again in 30 seconds, or ask your teacher for help."
+            )
+            startLockoutCountdown()
+        } else {
+            _uiState.value = _uiState.value.copy(
+                enteredNumericPin = "",
+                enteredPicturePinIcons = emptyList(),
+                failedAttempts = attempts,
+                pinErrorMessage = "$gentleMessage (${5 - attempts} tries remaining)"
+            )
+        }
+    }
+
+    private fun startLockoutCountdown() {
+        viewModelScope.launch {
+            while (_uiState.value.lockoutRemainingSeconds > 0) {
+                kotlinx.coroutines.delay(1000L)
+                val remaining = _uiState.value.lockoutRemainingSeconds - 1
+                _uiState.value = _uiState.value.copy(
+                    lockoutRemainingSeconds = remaining,
+                    pinErrorMessage = if (remaining > 0) "Let's take a quick breather! You can try your PIN again in $remaining seconds, or ask your teacher for help." else null
+                )
+            }
+            _uiState.value = _uiState.value.copy(failedAttempts = 0)
+        }
+    }
+
     private fun verifyNumericPin(pin: String) {
         val profile = _uiState.value.unlockingProfile ?: return
         val isMatch = PinSecurityUtil.verifyPin(pin, profile.hashedPin, profile.salt)
         if (isMatch) {
+            _uiState.value = _uiState.value.copy(failedAttempts = 0, lockoutRemainingSeconds = 0)
             activateProfile(profile)
         } else {
-            _uiState.value = _uiState.value.copy(
-                enteredNumericPin = "",
-                pinErrorMessage = "That PIN wasn't quite right. Let's try again!"
-            )
+            handleWrongAttempt("That PIN wasn't quite right. Let's try again!")
         }
     }
 
@@ -122,12 +161,10 @@ class ProfilesViewModel @Inject constructor(
         val encodedPin = PinSecurityUtil.encodePicturePin(icons)
         val isMatch = PinSecurityUtil.verifyPin(encodedPin, profile.hashedPin, profile.salt)
         if (isMatch) {
+            _uiState.value = _uiState.value.copy(failedAttempts = 0, lockoutRemainingSeconds = 0)
             activateProfile(profile)
         } else {
-            _uiState.value = _uiState.value.copy(
-                enteredPicturePinIcons = emptyList(),
-                pinErrorMessage = "That picture combination wasn't quite right. Let's try again!"
-            )
+            handleWrongAttempt("That picture combination wasn't quite right. Let's try again!")
         }
     }
 

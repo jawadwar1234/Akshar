@@ -59,4 +59,21 @@ class PinSecurityUtilTest {
         val wrongSequence = listOf("star", "dog", "apple")
         assertFalse(PinSecurityUtil.verifyPin(PinSecurityUtil.encodePicturePin(wrongSequence), storedHash, salt))
     }
+
+    @Test
+    fun picturePin_allNineIconsAvailable() {
+        assertEquals(9, PinSecurityUtil.PICTURE_PIN_ICONS.size)
+        val uniqueIds = PinSecurityUtil.PICTURE_PIN_ICONS.map { it.id }.toSet()
+        assertEquals(9, uniqueIds.size)
+    }
+
+    @Test
+    fun pinVerification_handlesNullOrEmptyGracefully() {
+        val salt = PinSecurityUtil.generateSalt()
+        val storedHash = PinSecurityUtil.hashPin("4321", salt)
+
+        assertFalse(PinSecurityUtil.verifyPin("", storedHash, salt))
+        assertFalse(PinSecurityUtil.verifyPin("4321", "", salt))
+        assertFalse(PinSecurityUtil.verifyPin("4321", storedHash, ""))
+    }
 }

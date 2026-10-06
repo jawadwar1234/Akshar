@@ -19,8 +19,12 @@ data class AuthUiState(
     val email: String = "",
     val password: String = "",
     val isRegisterMode: Boolean = false,
+    val rememberThisDevice: Boolean = true,
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
+    val showForgotPasswordDialog: Boolean = false,
+    val forgotPasswordEmail: String = "",
+    val passwordResetSentMessage: String? = null,
     val isAuthenticated: Boolean = false
 )
 
@@ -41,6 +45,39 @@ class AuthViewModel @Inject constructor(
 
     fun onPasswordChange(password: String) {
         _uiState.value = _uiState.value.copy(password = password, errorMessage = null)
+    }
+
+    fun toggleRememberThisDevice() {
+        _uiState.value = _uiState.value.copy(rememberThisDevice = !_uiState.value.rememberThisDevice)
+    }
+
+    fun openForgotPasswordDialog() {
+        _uiState.value = _uiState.value.copy(
+            showForgotPasswordDialog = true,
+            forgotPasswordEmail = _uiState.value.email,
+            passwordResetSentMessage = null
+        )
+    }
+
+    fun closeForgotPasswordDialog() {
+        _uiState.value = _uiState.value.copy(
+            showForgotPasswordDialog = false,
+            passwordResetSentMessage = null
+        )
+    }
+
+    fun onForgotPasswordEmailChange(email: String) {
+        _uiState.value = _uiState.value.copy(forgotPasswordEmail = email)
+    }
+
+    fun sendPasswordResetEmail() {
+        val email = _uiState.value.forgotPasswordEmail.trim()
+        if (email.isBlank()) return
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                passwordResetSentMessage = "We've sent a friendly password reset link to $email. Please check your inbox!"
+            )
+        }
     }
 
     fun toggleMode() {

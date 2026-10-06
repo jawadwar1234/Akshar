@@ -131,26 +131,63 @@ fun PinUnlockScreen(
 
                     if (uiState.pinErrorMessage != null) {
                         Spacer(modifier = Modifier.height(DesignTokens.Spacing.sm))
-                        Text(
-                            text = uiState.pinErrorMessage ?: "",
-                            style = MaterialTheme.typography.bodySmall,
-                            color = GentleErrorMuted
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .background(
+                                    color = if (uiState.lockoutRemainingSeconds > 0) CalmTeal.copy(alpha = 0.12f) else GentleErrorMuted.copy(alpha = 0.10f),
+                                    shape = MaterialTheme.shapes.medium
+                                )
+                                .padding(DesignTokens.Spacing.sm),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = uiState.pinErrorMessage ?: "",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (uiState.lockoutRemainingSeconds > 0) CalmTeal else GentleErrorMuted,
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                            )
+                        }
                     }
 
                     Spacer(modifier = Modifier.height(DesignTokens.Spacing.lg))
 
-                    // Keypad
-                    if (isPicturePin) {
-                        PicturePinKeypad(
-                            onIconSelected = onPictureIconSelected,
-                            onClear = onPictureClear
-                        )
+                    // Keypad (Active only when not locked out)
+                    if (uiState.lockoutRemainingSeconds <= 0) {
+                        if (isPicturePin) {
+                            PicturePinKeypad(
+                                onIconSelected = onPictureIconSelected,
+                                onClear = onPictureClear
+                            )
+                        } else {
+                            NumericPinKeypad(
+                                onDigit = onNumericDigit,
+                                onBackspace = onNumericBackspace
+                            )
+                        }
                     } else {
-                        NumericPinKeypad(
-                            onDigit = onNumericDigit,
-                            onBackspace = onNumericBackspace
-                        )
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(180.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = Icons.Default.Lock,
+                                    contentDescription = null,
+                                    tint = CalmTeal,
+                                    modifier = Modifier.size(48.dp)
+                                )
+                                Spacer(modifier = Modifier.height(DesignTokens.Spacing.sm))
+                                Text(
+                                    text = "Ready in ${uiState.lockoutRemainingSeconds}s",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = CalmTeal
+                                )
+                            }
+                        }
                     }
                 }
             }
