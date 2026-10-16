@@ -19,10 +19,13 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.VolumeUp
+import androidx.compose.material.icons.filled.Mic
+import androidx.compose.material.icons.filled.Spa
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -30,6 +33,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -43,7 +47,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
 import com.akshar.dyslexiareader.R
 import com.akshar.dyslexiareader.data.local.entity.WordMasteryEntity
 import com.akshar.dyslexiareader.domain.repository.WordMasteryRepository
@@ -75,7 +78,7 @@ fun WordMasteryScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = stringResource(R.string.practice_words_mastered_title),
+                        text = "Words You Have Mastered",
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.Bold,
                         color = CharcoalTextPrimary
@@ -84,7 +87,7 @@ fun WordMasteryScreen(
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(
-                            imageVector = Icons.Default.ArrowBack,
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.action_back),
                             tint = CharcoalTextPrimary
                         )
@@ -104,16 +107,16 @@ fun WordMasteryScreen(
         ) {
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.sm))
 
-            // Mastery Count Header
+            // Mastery Count Banner
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
                     .border(
                         width = DesignTokens.ElevationAndBorders.borderThin,
                         color = WarmForestGreen.copy(alpha = 0.4f),
-                        shape = MaterialTheme.shapes.medium
+                        shape = RoundedCornerShape(16.dp)
                     ),
-                shape = MaterialTheme.shapes.medium,
+                shape = RoundedCornerShape(16.dp),
                 colors = CardDefaults.cardColors(containerColor = WarmForestGreenContainer)
             ) {
                 Row(
@@ -124,7 +127,7 @@ fun WordMasteryScreen(
                         imageVector = Icons.Default.Star,
                         contentDescription = null,
                         tint = WarmForestGreen,
-                        modifier = Modifier.size(32.dp)
+                        modifier = Modifier.size(36.dp)
                     )
                     Spacer(modifier = Modifier.width(DesignTokens.Spacing.md))
                     Column {
@@ -135,7 +138,7 @@ fun WordMasteryScreen(
                             color = WarmForestGreen
                         )
                         Text(
-                            text = "Every word you practice builds your reading superpowers.",
+                            text = "Tap any word to listen to its pronunciation and slow syllables.",
                             style = MaterialTheme.typography.bodySmall,
                             color = CharcoalTextPrimary
                         )
@@ -151,7 +154,7 @@ fun WordMasteryScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Text(
-                        text = stringResource(R.string.practice_words_empty),
+                        text = "No mastered words yet. Practice reading textbook lessons to grow your list!",
                         style = MaterialTheme.typography.bodyLarge,
                         color = CharcoalTextSecondary
                     )
@@ -167,7 +170,8 @@ fun WordMasteryScreen(
                     items(masteredWords) { wordItem ->
                         WordMasteryCard(
                             wordItem = wordItem,
-                            onPlayPronunciation = { ttsManager.speakWord(wordItem.cleanWord) }
+                            onPlayPronunciation = { ttsManager.speakWord(wordItem.cleanWord) },
+                            onPlaySyllables = { ttsManager.speakWordSlowlySyllables(wordItem.cleanWord) }
                         )
                     }
                 }
@@ -179,7 +183,8 @@ fun WordMasteryScreen(
 @Composable
 fun WordMasteryCard(
     wordItem: WordMasteryEntity,
-    onPlayPronunciation: () -> Unit
+    onPlayPronunciation: () -> Unit,
+    onPlaySyllables: () -> Unit
 ) {
     Card(
         modifier = Modifier
@@ -187,43 +192,64 @@ fun WordMasteryCard(
             .border(
                 width = DesignTokens.ElevationAndBorders.borderThin,
                 color = PaperCreamBorder,
-                shape = MaterialTheme.shapes.medium
+                shape = RoundedCornerShape(16.dp)
             ),
-        shape = MaterialTheme.shapes.medium,
+        shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = PaperCreamSurface)
     ) {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(DesignTokens.Spacing.md),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically
+        Column(
+            modifier = Modifier.padding(DesignTokens.Spacing.md)
         ) {
-            Column(modifier = Modifier.weight(1f)) {
-                Text(
-                    text = wordItem.word,
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = CharcoalTextPrimary
-                )
-                Text(
-                    text = "Practiced ${wordItem.timesPracticed} times",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = CharcoalTextSecondary
-                )
-            }
-            IconButton(
-                onClick = onPlayPronunciation,
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(TerracottaAccent.copy(alpha = 0.12f), shape = CircleShape)
+            Text(
+                text = wordItem.word,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold,
+                color = CharcoalTextPrimary
+            )
+            Text(
+                text = "Read ${wordItem.timesRead}x • Practiced ${wordItem.timesPracticed}x",
+                style = MaterialTheme.typography.bodySmall,
+                color = CharcoalTextSecondary
+            )
+
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.sm))
+
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Icon(
-                    imageVector = Icons.Default.VolumeUp,
-                    contentDescription = "Pronounce",
-                    tint = TerracottaAccent,
-                    modifier = Modifier.size(20.dp)
-                )
+                // Syllables button
+                IconButton(
+                    onClick = onPlaySyllables,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(CalmTeal.copy(alpha = 0.12f), shape = CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Spa,
+                        contentDescription = "Slow syllables",
+                        tint = CalmTeal,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(DesignTokens.Spacing.xs))
+
+                // Normal speech button
+                IconButton(
+                    onClick = onPlayPronunciation,
+                    modifier = Modifier
+                        .size(36.dp)
+                        .background(TerracottaAccent.copy(alpha = 0.12f), shape = CircleShape)
+                ) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.VolumeUp,
+                        contentDescription = "Pronounce word",
+                        tint = TerracottaAccent,
+                        modifier = Modifier.size(18.dp)
+                    )
+                }
             }
         }
     }

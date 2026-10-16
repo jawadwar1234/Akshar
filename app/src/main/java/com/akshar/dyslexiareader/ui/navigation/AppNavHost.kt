@@ -27,10 +27,14 @@ import com.akshar.dyslexiareader.ui.profiles.ProfilesViewModel
 import com.akshar.dyslexiareader.ui.reader.ReaderScreen
 import com.akshar.dyslexiareader.ui.reader.ReaderViewModel
 import com.akshar.dyslexiareader.ui.reader.TextToSpeechManager
+import com.akshar.dyslexiareader.ui.onboarding.FirstRunPersonalizationScreen
 import com.akshar.dyslexiareader.ui.settings.PrivacyDataScreen
+import com.akshar.dyslexiareader.ui.stats.ParentTeacherStatsScreen
+import com.akshar.dyslexiareader.ui.stats.StatsViewModel
 
 object NavDestinations {
     const val CONSENT = "consent"
+    const val ONBOARDING = "onboarding"
     const val AUTH = "auth"
     const val PROFILES = "profiles"
     const val LIBRARY = "library"
@@ -39,6 +43,7 @@ object NavDestinations {
     const val READER = "reader/{docId}"
     const val PRACTICE = "practice/{docId}?word={word}"
     const val MASTERY = "mastery/{profileId}"
+    const val STATS = "stats?profileId={profileId}"
     const val SETTINGS = "settings"
 }
 
@@ -51,6 +56,7 @@ fun AppNavHost(
     readerViewModel: ReaderViewModel = hiltViewModel(),
     practiceViewModel: PracticeViewModel = hiltViewModel(),
     libraryViewModel: LibraryViewModel = hiltViewModel(),
+    statsViewModel: StatsViewModel = hiltViewModel(),
     wordMasteryRepository: WordMasteryRepository,
     ttsManager: TextToSpeechManager
 ) {
@@ -58,6 +64,7 @@ fun AppNavHost(
 
     val startDestination = when {
         !userSettings.parentalConsentGiven -> NavDestinations.CONSENT
+        !userSettings.firstRunCompleted -> NavDestinations.ONBOARDING
         userSettings.parentAccountId == null -> NavDestinations.AUTH
         userSettings.activeProfileId == null -> NavDestinations.PROFILES
         else -> NavDestinations.LIBRARY
@@ -72,8 +79,27 @@ fun AppNavHost(
             ParentalConsentScreen(
                 onConsentAccepted = {
                     authViewModel.acceptParentalConsent()
-                    navController.navigate(NavDestinations.AUTH) {
+                    navController.navigate(NavDestinations.ONBOARDING) {
                         popUpTo(NavDestinations.CONSENT) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // 1b. First-Run Personalization & 3-Screen Tutorial
+        composable(NavDestinations.ONBOARDING) {
+            FirstRunPersonalizationScreen(
+                onComplete = { theme, fontSize, lineSpacing, letterSpacing, fontFamily, rulerEnabled ->
+                    authViewModel.completeFirstRunPersonalization(
+                        theme = theme,
+                        fontSize = fontSize,
+                        lineSpacing = lineSpacing,
+                        letterSpacing = letterSpacing,
+                        fontFamily = fontFamily,
+                        rulerEnabled = rulerEnabled
+                    )
+                    navController.navigate(NavDestinations.AUTH) {
+                        popUpTo(NavDestinations.ONBOARDING) { inclusive = true }
                     }
                 }
             )
@@ -102,6 +128,9 @@ fun AppNavHost(
                 },
                 onNavigateToSettings = {
                     navController.navigate(NavDestinations.SETTINGS)
+                },
+                onNavigateToParentStats = {
+                    navController.navigate("stats")
                 }
             )
         }
@@ -119,6 +148,14 @@ fun AppNavHost(
                 },
                 onNavigateToProfiles = {
                     navController.navigate(NavDestinations.PROFILES)
+                },
+                onNavigateToStats = {
+                    val activeId = userSettings.activeProfileId ?: ""
+                    if (activeId.isNotBlank()) {
+                        navController.navigate("stats?profileId=$activeId")
+                    } else {
+                        navController.navigate("stats")
+                    }
                 }
             )
         }
@@ -157,7 +194,12 @@ fun AppNavHost(
                 viewModel = readerViewModel,
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToPractice = { dId, targetWord ->
-                    navController.navigate("practice/$dId?word=$targetWord")
+                    val id = dId.ifBlank { docId }
+                    if (!targetWord.isNullOrBlank()) {
+                        navController.navigate("practice/$id?word=$targetWord")
+                    } else {
+                        navController.navigate("practice/$id")
+                    }
                 }
             )
         }
@@ -176,7 +218,7 @@ fun AppNavHost(
         ) { backStackEntry ->
             val docId = backStackEntry.arguments?.getString("docId") ?: ""
             val word = backStackEntry.arguments?.getString("word")
-            val activeProfile = userSettings.activeProfileId ?: "default"
+            val activeProfile = userSettings.activeProfileId?.ifBlank { "default" } ?: "default"
 
             PracticeModeScreen(
                 documentId = docId,
@@ -203,7 +245,26 @@ fun AppNavHost(
             )
         }
 
-        // 10. Settings & DPDP Privacy Data Screen
+        // 10. Parent/Teacher Stats & Progress Screen
+        composable(
+            route = NavDestinations.STATS,
+            arguments = listOf(
+                navArgument("profileId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val profileId = backStackEntry.arguments?.getString("profileId")
+            ParentTeacherStatsScreen(
+                profileId = profileId,
+                viewModel = statsViewModel,
+                onNavigateBack = { navController.popBackStack() }
+            )
+        }
+
+        // 11. Settings & DPDP Privacy Data Screen
         composable(NavDestinations.SETTINGS) {
             PrivacyDataScreen(
                 authViewModel = authViewModel,

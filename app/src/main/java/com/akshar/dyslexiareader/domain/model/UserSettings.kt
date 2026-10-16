@@ -4,6 +4,7 @@ import com.akshar.dyslexiareader.util.AppLanguage
 
 data class UserSettings(
     val parentalConsentGiven: Boolean = false,
+    val firstRunCompleted: Boolean = false,
     val activeProfileId: String? = null,
     val parentAccountId: String? = null,
     val isOfflineMode: Boolean = true,
@@ -21,5 +22,7 @@ data class UserSettings(
     val marginWidth: Int = 16,
     val fontFamily: String = "lexend",
     val ttsSpeed: Float = 1.0f,
-    val ttsPitch: Float = 1.0f
+    val ttsPitch: Float = 1.0f,
+    val backupPhotosToCloud: Boolean = false,
+    val backupPhotosWifiOnly: Boolean = true
 )

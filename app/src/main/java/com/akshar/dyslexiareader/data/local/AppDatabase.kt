@@ -9,12 +9,14 @@ import com.akshar.dyslexiareader.data.local.dao.DocumentDao
 import com.akshar.dyslexiareader.data.local.dao.PageDao
 import com.akshar.dyslexiareader.data.local.dao.ReaderSettingsDao
 import com.akshar.dyslexiareader.data.local.dao.ReadingSessionDao
+import com.akshar.dyslexiareader.data.local.dao.TeacherNoteDao
 import com.akshar.dyslexiareader.data.local.dao.WordMasteryDao
 import com.akshar.dyslexiareader.data.local.entity.ChildProfileEntity
 import com.akshar.dyslexiareader.data.local.entity.DocumentEntity
 import com.akshar.dyslexiareader.data.local.entity.PageEntity
 import com.akshar.dyslexiareader.data.local.entity.ReaderSettingsEntity
 import com.akshar.dyslexiareader.data.local.entity.ReadingSessionEntity
+import com.akshar.dyslexiareader.data.local.entity.TeacherNoteEntity
 import com.akshar.dyslexiareader.data.local.entity.WordMasteryEntity
 
 @Database(
@@ -24,9 +26,10 @@ import com.akshar.dyslexiareader.data.local.entity.WordMasteryEntity
         WordMasteryEntity::class,
         PageEntity::class,
         ReaderSettingsEntity::class,
-        ReadingSessionEntity::class
+        ReadingSessionEntity::class,
+        TeacherNoteEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -36,9 +39,28 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun pageDao(): PageDao
     abstract fun readerSettingsDao(): ReaderSettingsDao
     abstract fun readingSessionDao(): ReadingSessionDao
+    abstract fun teacherNoteDao(): TeacherNoteDao
 
     companion object {
         const val DATABASE_NAME = "akshar_dyslexia_reader.db"
+
+        @Volatile
+        private var INSTANCE: AppDatabase? = null
+
+        fun getInstance(context: android.content.Context): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = androidx.room.Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    DATABASE_NAME
+                )
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .fallbackToDestructiveMigration()
+                .build()
+                INSTANCE = instance
+                instance
+            }
+        }
 
         val MIGRATION_1_2 = object : Migration(1, 2) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -110,6 +132,25 @@ abstract class AppDatabase : RoomDatabase() {
                         isDeleted INTEGER NOT NULL
                     )
                 """)
+            }
+        }
+
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("""
+                    CREATE TABLE IF NOT EXISTS teacher_notes (
+                        id TEXT PRIMARY KEY NOT NULL,
+                        childProfileId TEXT NOT NULL,
+                        noteText TEXT NOT NULL,
+                        category TEXT NOT NULL DEFAULT 'General',
+                        authorName TEXT NOT NULL DEFAULT 'Teacher / Parent',
+                        createdAt INTEGER NOT NULL,
+                        updatedAt INTEGER NOT NULL,
+                        isDeleted INTEGER NOT NULL DEFAULT 0
+                    )
+                """)
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_teacher_notes_childProfileId ON teacher_notes(childProfileId)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS index_teacher_notes_createdAt ON teacher_notes(createdAt)")
             }
         }
     }

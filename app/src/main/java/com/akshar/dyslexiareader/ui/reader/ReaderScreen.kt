@@ -34,6 +34,7 @@ import androidx.compose.material.icons.filled.FullscreenExit
 import androidx.compose.material.icons.filled.LinearScale
 import androidx.compose.material.icons.filled.Pause
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.RecordVoiceOver
 import androidx.compose.material.icons.filled.Save
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SkipNext
@@ -91,6 +92,8 @@ import com.akshar.dyslexiareader.ui.theme.DyslexiaFontOption
 import com.akshar.dyslexiareader.ui.theme.LocalReaderTheme
 import com.akshar.dyslexiareader.ui.theme.ReaderThemePreset
 import com.akshar.dyslexiareader.ui.theme.TerracottaAccent
+import com.akshar.dyslexiareader.ui.voice.VoiceListeningBanner
+import com.akshar.dyslexiareader.ui.voice.VoiceMicButton
 import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
@@ -99,12 +102,23 @@ fun ReaderScreen(
     documentId: String,
     viewModel: ReaderViewModel,
     onNavigateBack: () -> Unit,
-    onNavigateToPractice: (String, String) -> Unit
+    onNavigateToPractice: (String, String) -> Unit,
+    onNavigateToScan: () -> Unit = {}
 ) {
     val lifecycleOwner = LocalLifecycleOwner.current
 
     LaunchedEffect(documentId) {
         viewModel.loadDocument(documentId)
+    }
+
+    LaunchedEffect(Unit) {
+        viewModel.navigationEvent.collect { target ->
+            if (target == "scan") {
+                onNavigateToScan()
+            } else if (target == "library") {
+                onNavigateBack()
+            }
+        }
     }
 
     // Clean pause on backgrounding or phone calls
@@ -171,6 +185,30 @@ fun ReaderScreen(
                                 )
                             }
 
+                            // Gentle Reading Practice Mode
+                            OutlinedButton(
+                                onClick = {
+                                    viewModel.stopTts()
+                                    val docId = uiState.document?.id ?: documentId
+                                    onNavigateToPractice(docId, "")
+                                },
+                                shape = MaterialTheme.shapes.medium,
+                                modifier = Modifier.padding(end = DesignTokens.Spacing.xs)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Default.RecordVoiceOver,
+                                    contentDescription = null,
+                                    tint = CalmTeal,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(modifier = Modifier.width(DesignTokens.Spacing.xs))
+                                Text(
+                                    text = "Practice",
+                                    style = MaterialTheme.typography.labelMedium,
+                                    color = CalmTeal
+                                )
+                            }
+
                             // Reading Ruler Toggle
                             OutlinedButton(
                                 onClick = viewModel::toggleRuler,
@@ -227,6 +265,15 @@ fun ReaderScreen(
                     )
                 }
             },
+            floatingActionButton = {
+                if (!uiState.isEditMode) {
+                    VoiceMicButton(
+                        voiceCommandManager = viewModel.voiceCommandManager,
+                        currentLanguage = userSettings.appLanguage,
+                        modifier = Modifier.padding(bottom = if (uiState.isFullScreen) 16.dp else 64.dp)
+                    )
+                }
+            },
             containerColor = theme.background
         ) { padding ->
             Box(
@@ -241,6 +288,14 @@ fun ReaderScreen(
                     .background(theme.background)
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
+                    // Voice Listening Feedback & Hands-Free Banner
+                    VoiceListeningBanner(
+                        voiceCommandManager = viewModel.voiceCommandManager,
+                        onToggleHandsFree = {
+                            viewModel.voiceCommandManager.toggleHandsFree(userSettings.appLanguage)
+                        }
+                    )
+
                     // Missing Voice Banner if voice not installed on device
                     if (!ttsState.isVoiceAvailable) {
                         Card(
@@ -409,7 +464,7 @@ fun ReaderScreen(
                 onSpeakWord = { w -> viewModel.ttsManager.speakWord(w, script) },
                 onSpeakWordSlowly = { w -> viewModel.ttsManager.speakWordSlowlySyllables(w, script) },
                 onPracticeWord = { cleanWord ->
-                    val docId = uiState.document?.id ?: ""
+                    val docId = uiState.document?.id ?: documentId
                     onNavigateToPractice(docId, cleanWord)
                 },
                 onDismiss = viewModel::dismissWordInspection

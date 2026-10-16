@@ -6,35 +6,60 @@ import com.akshar.dyslexiareader.domain.model.SupportedScript
 import com.akshar.dyslexiareader.domain.ocr.OcrEngine
 import com.akshar.dyslexiareader.domain.ocr.OcrResult
 import com.akshar.dyslexiareader.domain.util.ScriptDetector
+import com.akshar.dyslexiareader.domain.util.TextCleanupUtil
+import com.akshar.dyslexiareader.ui.camera.BitmapUtil
 import com.googlecode.tesseract.android.TessBaseAPI
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.io.FileOutputStream
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class TesseractOcrEngine @Inject constructor(
-    @ApplicationContext private val context: Context
+    @ApplicationContext private val context: Context,
+    private val languageManager: TesseractLanguageManager
 ) : OcrEngine {
 
-    private val tessDataDir: File by lazy {
-        File(context.filesDir, "tessdata").apply { mkdirs() }
-    }
+    override suspend fun recognizeText(bitmap: Bitmap): OcrResult = recognizeText(bitmap, null)
 
-    override suspend fun recognizeText(bitmap: Bitmap): OcrResult = withContext(Dispatchers.Default) {
+    /**
+     * Performs Tesseract OCR using specified language or available installed models.
+     * Reuses contrast preprocessing and cleans output with TextCleanupUtil.
+     */
+    suspend fun recognizeText(bitmap: Bitmap, targetLanguage: String? = null): OcrResult = withContext(Dispatchers.Default) {
         var tessApi: TessBaseAPI? = null
         try {
-            tessApi = TessBaseAPI()
             val dataPath = context.filesDir.absolutePath
 
-            // Check if Gujarati or Bengali traineddata exists, or initialize multi-language
+            // Determine which language models are available
+            val activeLang = if (!targetLanguage.isNullOrBlank() && languageManager.isLanguageDownloaded(targetLanguage)) {
+                targetLanguage
+            } else {
+                // Find all installed languages, prioritizing Gujarati and Bengali if present
+                val installed = listOf("guj", "ben", "hin", "eng").filter { languageManager.isLanguageDownloaded(it) }
+                if (installed.isNotEmpty()) {
+                    installed.joinToString("+")
+                } else {
+                    "eng"
+                }
+            }
+
+            // Ensure destination tessdata directory exists
+            languageManager.tessDataDir
+
+            tessApi = TessBaseAPI()
             val initSuccess = try {
-                tessApi.init(dataPath, "guj+ben+hin+eng")
+                // Initialize with LSTM engine mode (OEM_LSTM_ONLY = 1)
+                tessApi.init(dataPath, activeLang, TessBaseAPI.OEM_LSTM_ONLY)
             } catch (e: Exception) {
-                false
+                // Fallback to default init
+                try {
+                    tessApi.init(dataPath, activeLang)
+                } catch (_: Exception) {
+                    false
+                }
             }
 
             if (!initSuccess) {
@@ -44,14 +69,33 @@ class TesseractOcrEngine @Inject constructor(
                 )
             }
 
-            tessApi.setImage(bitmap)
-            val extracted = tessApi.utF8Text ?: ""
-            val script = ScriptDetector.detectScript(extracted)
+            // Set Page Segmentation Mode to Auto (PSM_AUTO = 3)
+            try {
+                tessApi.pageSegMode = TessBaseAPI.PageSegMode.PSM_AUTO
+            } catch (_: Exception) {}
+
+            // 1. Preprocess: enhance contrast and optimize for OCR
+            val preprocessedBitmap = try {
+                BitmapUtil.enhanceTextContrast(bitmap)
+            } catch (_: Exception) {
+                bitmap
+            }
+
+            // 2. Perform OCR
+            tessApi.setImage(preprocessedBitmap)
+            val rawExtracted = tessApi.utF8Text ?: ""
+
+            // 3. Post-process: clean hyphens, normalize line breaks and Indic punctuation
+            val cleanedText = TextCleanupUtil.cleanupOcrText(rawExtracted)
+            val script = ScriptDetector.detectScript(cleanedText)
+
+            val isBeta = script == SupportedScript.GUJARATI || script == SupportedScript.BENGALI ||
+                activeLang.contains("guj") || activeLang.contains("ben")
 
             OcrResult(
-                text = extracted,
+                text = cleanedText,
                 detectedScript = script,
-                isTesseractBetaUsed = true
+                isTesseractBetaUsed = isBeta
             )
         } catch (e: Exception) {
             OcrResult(text = "", isTesseractBetaUsed = true)
@@ -59,24 +103,6 @@ class TesseractOcrEngine @Inject constructor(
             try {
                 tessApi?.recycle()
             } catch (ignored: Exception) {}
-        }
-    }
-
-    /**
-     * Helper to copy traineddata models from assets to internal storage if bundled.
-     */
-    suspend fun copyAssetDataIfNeeded(languageCode: String) = withContext(Dispatchers.IO) {
-        val destFile = File(tessDataDir, "$languageCode.traineddata")
-        if (!destFile.exists()) {
-            try {
-                context.assets.open("tessdata/$languageCode.traineddata").use { input ->
-                    FileOutputStream(destFile).use { output ->
-                        input.copyTo(output)
-                    }
-                }
-            } catch (e: Exception) {
-                // If not in assets, it will degrade gracefully
-            }
         }
     }
 }

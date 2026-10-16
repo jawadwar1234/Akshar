@@ -14,6 +14,12 @@ interface PageDao {
     @Query("SELECT * FROM pages WHERE documentId = :documentId AND isDeleted = 0 ORDER BY pageNumber ASC")
     fun getPagesForDocument(documentId: String): Flow<List<PageEntity>>
 
+    @Query("SELECT * FROM pages WHERE documentId = :documentId AND isDeleted = 0 ORDER BY pageNumber ASC")
+    suspend fun getPagesForDocumentDirect(documentId: String): List<PageEntity>
+
+    @Query("SELECT * FROM pages")
+    suspend fun getAllPages(): List<PageEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertPages(pages: List<PageEntity>)
 

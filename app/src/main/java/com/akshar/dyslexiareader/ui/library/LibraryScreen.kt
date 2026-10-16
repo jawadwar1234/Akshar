@@ -29,6 +29,7 @@ import androidx.compose.material.icons.filled.FavoriteBorder
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -94,10 +95,12 @@ fun LibraryScreen(
     viewModel: LibraryViewModel,
     onDocumentSelected: (String) -> Unit,
     onNavigateToScan: () -> Unit,
-    onNavigateToProfiles: () -> Unit
+    onNavigateToProfiles: () -> Unit,
+    onNavigateToStats: () -> Unit = {}
 ) {
     val documents by viewModel.documents.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
+    val syncStatus by viewModel.syncStatus.collectAsState()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(uiState.snackbarMessage) {
@@ -118,14 +121,47 @@ fun LibraryScreen(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = stringResource(R.string.nav_library),
-                        style = MaterialTheme.typography.titleLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = CharcoalTextPrimary
-                    )
+                    Column {
+                        Text(
+                            text = stringResource(R.string.nav_library),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = CharcoalTextPrimary
+                        )
+                        val syncLabel = when (syncStatus) {
+                            com.akshar.dyslexiareader.data.sync.SyncStatus.SAVED_TO_CLOUD -> "● Saved to your account"
+                            com.akshar.dyslexiareader.data.sync.SyncStatus.SYNCING -> "● Syncing..."
+                            com.akshar.dyslexiareader.data.sync.SyncStatus.OFFLINE_PAUSED -> "● Saved on this phone (Offline)"
+                            else -> "● Saved on this phone"
+                        }
+                        Text(
+                            text = syncLabel,
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (syncStatus == com.akshar.dyslexiareader.data.sync.SyncStatus.SAVED_TO_CLOUD) CalmTeal else CharcoalTextSecondary
+                        )
+                    }
                 },
                 actions = {
+                    // Clear all history button if documents exist
+                    if (documents.isNotEmpty()) {
+                        IconButton(onClick = viewModel::openClearAllHistoryDialog) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Clear All History",
+                                tint = CharcoalTextSecondary
+                            )
+                        }
+                    }
+
+                    // Insights / Stats Button
+                    IconButton(onClick = onNavigateToStats) {
+                        Icon(
+                            imageVector = Icons.Default.Star,
+                            contentDescription = "Progress & Insights",
+                            tint = TerracottaAccent
+                        )
+                    }
+
                     // Switch Profile Button
                     OutlinedButton(
                         onClick = onNavigateToProfiles,
@@ -138,6 +174,15 @@ fun LibraryScreen(
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = PaperCreamBackground)
+            )
+        },
+        floatingActionButton = {
+            androidx.compose.material3.ExtendedFloatingActionButton(
+                onClick = onNavigateToScan,
+                icon = { Icon(Icons.Default.CameraAlt, contentDescription = null) },
+                text = { Text(stringResource(R.string.nav_scan), fontWeight = FontWeight.Bold) },
+                containerColor = TerracottaAccent,
+                contentColor = Color.White
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -421,6 +466,29 @@ fun LibraryScreen(
             containerColor = PaperCreamBackground
         )
     }
+
+    // Clear All History Confirmation Dialog
+    if (uiState.isClearAllHistoryDialogOpen) {
+        AlertDialog(
+            onDismissRequest = viewModel::dismissClearAllHistoryDialog,
+            title = { Text("Clear All Reading History", color = CharcoalTextPrimary, fontWeight = FontWeight.Bold) },
+            text = { Text("Are you sure you want to delete all reading history and lessons for this profile? This will clear your list.", color = CharcoalTextSecondary) },
+            confirmButton = {
+                Button(
+                    onClick = viewModel::confirmClearAllHistory,
+                    colors = ButtonDefaults.buttonColors(containerColor = GentleErrorMuted)
+                ) {
+                    Text("Clear All", color = Color.White)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = viewModel::dismissClearAllHistoryDialog) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+            containerColor = PaperCreamBackground
+        )
+    }
 }
 
 @Composable
@@ -436,14 +504,14 @@ fun DocumentCard(
     val dateString = remember(document.createdAt) { dateFormat.format(Date(document.createdAt)) }
 
     Card(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .border(
                 width = DesignTokens.ElevationAndBorders.borderThin,
                 color = PaperCreamBorder,
                 shape = MaterialTheme.shapes.medium
-            )
-            .clickable(onClick = onClick),
+            ),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = PaperCreamSurface)
     ) {

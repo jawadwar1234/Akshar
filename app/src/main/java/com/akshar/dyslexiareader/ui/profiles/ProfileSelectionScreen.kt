@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Face
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
@@ -56,14 +57,21 @@ import com.akshar.dyslexiareader.ui.theme.TerracottaAccent
 fun ProfileSelectionScreen(
     viewModel: ProfilesViewModel,
     onProfileSelected: (String) -> Unit,
-    onNavigateToSettings: () -> Unit
+    onNavigateToSettings: () -> Unit,
+    onNavigateToParentStats: () -> Unit = {}
 ) {
     val profiles by viewModel.allProfiles.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
 
+    LaunchedEffect(Unit) {
+        viewModel.resetUnlockState()
+    }
+
     LaunchedEffect(uiState.isUnlockSuccess) {
         if (uiState.isUnlockSuccess && uiState.selectedProfile != null) {
-            onProfileSelected(uiState.selectedProfile!!.id)
+            val selectedId = uiState.selectedProfile!!.id
+            viewModel.resetUnlockState()
+            onProfileSelected(selectedId)
         }
     }
 
@@ -86,22 +94,44 @@ fun ProfileSelectionScreen(
                 fontWeight = FontWeight.Bold,
                 color = TerracottaAccent
             )
-            // Settings button with visible label
-            OutlinedButton(
-                onClick = onNavigateToSettings,
-                modifier = Modifier.height(44.dp),
-                shape = MaterialTheme.shapes.medium
-            ) {
-                Icon(
-                    imageVector = Icons.Default.Settings,
-                    contentDescription = null,
-                    modifier = Modifier.size(18.dp)
-                )
-                Spacer(modifier = Modifier.width(DesignTokens.Spacing.xs))
-                Text(
-                    text = stringResource(R.string.nav_settings),
-                    style = MaterialTheme.typography.labelMedium
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(DesignTokens.Spacing.xs)) {
+                // Parent / Teacher Stats Button
+                OutlinedButton(
+                    onClick = onNavigateToParentStats,
+                    modifier = Modifier.height(44.dp),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Star,
+                        contentDescription = "Parent / Teacher Progress Insights",
+                        tint = TerracottaAccent,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(DesignTokens.Spacing.xs))
+                    Text(
+                        text = "Progress",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = TerracottaAccent
+                    )
+                }
+
+                // Settings button with visible label
+                OutlinedButton(
+                    onClick = onNavigateToSettings,
+                    modifier = Modifier.height(44.dp),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.Settings,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(DesignTokens.Spacing.xs))
+                    Text(
+                        text = stringResource(R.string.nav_settings),
+                        style = MaterialTheme.typography.labelMedium
+                    )
+                }
             }
         }
 
@@ -176,6 +206,7 @@ fun ProfileCard(
     onClick: () -> Unit
 ) {
     Card(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .height(160.dp)
@@ -183,8 +214,7 @@ fun ProfileCard(
                 width = DesignTokens.ElevationAndBorders.borderThin,
                 color = PaperCreamBorder,
                 shape = MaterialTheme.shapes.medium
-            )
-            .clickable(onClick = onClick),
+            ),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = PaperCreamSurface)
     ) {
@@ -229,6 +259,7 @@ fun AddProfileCard(
     onClick: () -> Unit
 ) {
     Card(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
             .height(160.dp)
@@ -236,8 +267,7 @@ fun AddProfileCard(
                 width = DesignTokens.ElevationAndBorders.borderThin,
                 color = CalmTeal.copy(alpha = 0.4f),
                 shape = MaterialTheme.shapes.medium
-            )
-            .clickable(onClick = onClick),
+            ),
         shape = MaterialTheme.shapes.medium,
         colors = CardDefaults.cardColors(containerColor = PaperCreamSurface)
     ) {

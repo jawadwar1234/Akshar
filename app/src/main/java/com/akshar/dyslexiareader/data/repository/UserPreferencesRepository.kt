@@ -25,6 +25,7 @@ class UserPreferencesRepository @Inject constructor(
 ) {
     private object PreferencesKeys {
         val PARENTAL_CONSENT_GIVEN = booleanPreferencesKey("parental_consent_given")
+        val FIRST_RUN_COMPLETED = booleanPreferencesKey("first_run_completed")
         val ACTIVE_PROFILE_ID = stringPreferencesKey("active_profile_id")
         val PARENT_ACCOUNT_ID = stringPreferencesKey("parent_account_id")
         val IS_OFFLINE_MODE = booleanPreferencesKey("is_offline_mode")
@@ -43,11 +44,14 @@ class UserPreferencesRepository @Inject constructor(
         val FONT_FAMILY = stringPreferencesKey("font_family")
         val TTS_SPEED = floatPreferencesKey("tts_speed")
         val TTS_PITCH = floatPreferencesKey("tts_pitch")
+        val BACKUP_PHOTOS_TO_CLOUD = booleanPreferencesKey("backup_photos_to_cloud")
+        val BACKUP_PHOTOS_WIFI_ONLY = booleanPreferencesKey("backup_photos_wifi_only")
     }
 
     val userSettingsFlow: Flow<UserSettings> = context.dataStore.data.map { prefs ->
         UserSettings(
             parentalConsentGiven = prefs[PreferencesKeys.PARENTAL_CONSENT_GIVEN] ?: false,
+            firstRunCompleted = prefs[PreferencesKeys.FIRST_RUN_COMPLETED] ?: false,
             activeProfileId = prefs[PreferencesKeys.ACTIVE_PROFILE_ID],
             parentAccountId = prefs[PreferencesKeys.PARENT_ACCOUNT_ID],
             isOfflineMode = prefs[PreferencesKeys.IS_OFFLINE_MODE] ?: true,
@@ -65,8 +69,16 @@ class UserPreferencesRepository @Inject constructor(
             marginWidth = prefs[PreferencesKeys.MARGIN_WIDTH] ?: 16,
             fontFamily = prefs[PreferencesKeys.FONT_FAMILY] ?: "lexend",
             ttsSpeed = prefs[PreferencesKeys.TTS_SPEED] ?: 1.0f,
-            ttsPitch = prefs[PreferencesKeys.TTS_PITCH] ?: 1.0f
+            ttsPitch = prefs[PreferencesKeys.TTS_PITCH] ?: 1.0f,
+            backupPhotosToCloud = prefs[PreferencesKeys.BACKUP_PHOTOS_TO_CLOUD] ?: false,
+            backupPhotosWifiOnly = prefs[PreferencesKeys.BACKUP_PHOTOS_WIFI_ONLY] ?: true
         )
+    }
+
+    suspend fun setFirstRunCompleted(completed: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[PreferencesKeys.FIRST_RUN_COMPLETED] = completed
+        }
     }
 
     suspend fun setParentalConsent(given: Boolean) {
@@ -133,6 +145,13 @@ class UserPreferencesRepository @Inject constructor(
             chunkingPaletteIndex?.let { prefs[PreferencesKeys.CHUNKING_PALETTE_INDEX] = it }
             ttsSpeed?.let { prefs[PreferencesKeys.TTS_SPEED] = it }
             ttsPitch?.let { prefs[PreferencesKeys.TTS_PITCH] = it }
+        }
+    }
+
+    suspend fun setPhotoBackupSettings(backupToCloud: Boolean, wifiOnly: Boolean) {
+        context.dataStore.edit { prefs ->
+            prefs[PreferencesKeys.BACKUP_PHOTOS_TO_CLOUD] = backupToCloud
+            prefs[PreferencesKeys.BACKUP_PHOTOS_WIFI_ONLY] = wifiOnly
         }
     }
 

@@ -4,15 +4,19 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.akshar.dyslexiareader.data.local.entity.ChildProfileEntity
 import com.akshar.dyslexiareader.data.repository.UserPreferencesRepository
+import com.akshar.dyslexiareader.data.sync.DataExportManager
+import com.akshar.dyslexiareader.data.sync.SyncManager
 import com.akshar.dyslexiareader.domain.repository.ChildProfileRepository
 import com.akshar.dyslexiareader.domain.repository.DocumentRepository
 import com.akshar.dyslexiareader.domain.repository.WordMasteryRepository
 import com.akshar.dyslexiareader.util.PinSecurityUtil
+import com.google.firebase.auth.FirebaseAuth
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.util.UUID
@@ -36,8 +40,13 @@ class ProfilesViewModel @Inject constructor(
     private val profileRepository: ChildProfileRepository,
     private val documentRepository: DocumentRepository,
     private val wordMasteryRepository: WordMasteryRepository,
-    private val preferencesRepository: UserPreferencesRepository
+    private val statsRepository: com.akshar.dyslexiareader.domain.repository.StatsRepository,
+    private val preferencesRepository: UserPreferencesRepository,
+    private val dataExportManager: DataExportManager,
+    private val syncManager: SyncManager
 ) : ViewModel() {
+
+    val syncStatus = syncManager.syncStatus
 
     val allProfiles: StateFlow<List<ChildProfileEntity>> = profileRepository.getAllProfiles()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
@@ -188,6 +197,16 @@ class ProfilesViewModel @Inject constructor(
         }
     }
 
+    fun resetUnlockState() {
+        _uiState.value = _uiState.value.copy(
+            unlockingProfile = null,
+            enteredNumericPin = "",
+            enteredPicturePinIcons = emptyList(),
+            pinErrorMessage = null,
+            isUnlockSuccess = false
+        )
+    }
+
     fun createNewProfile(
         name: String,
         gradeLevel: String,
@@ -196,11 +215,13 @@ class ProfilesViewModel @Inject constructor(
         avatarName: String
     ) {
         viewModelScope.launch {
+            val userSettings = preferencesRepository.userSettingsFlow.first()
+            val parentId = userSettings.parentAccountId ?: "parent_local"
             val salt = PinSecurityUtil.generateSalt()
             val hashed = PinSecurityUtil.hashPin(rawPin, salt)
             val newProfile = ChildProfileEntity(
                 id = UUID.randomUUID().toString(),
-                parentAccountId = "parent_active",
+                parentAccountId = parentId,
                 displayName = name.trim(),
                 avatarIconName = avatarName,
                 pinType = pinType,
@@ -223,22 +244,40 @@ class ProfilesViewModel @Inject constructor(
 
     fun deleteProfile(profileId: String) {
         viewModelScope.launch {
+            val userSettings = preferencesRepository.userSettingsFlow.first()
+            val parentId = userSettings.parentAccountId ?: "offline"
             profileRepository.deleteProfile(profileId)
+            documentRepository.deleteAllForProfile(profileId)
+            wordMasteryRepository.clearMasteryForProfile(profileId)
+            statsRepository.deleteStudentStats(profileId)
+            syncManager.deleteRemoteProfile(parentId, profileId)
         }
     }
 
-    fun exportData(profileId: String, onExportReady: (String) -> Unit) {
+    fun exportData(parentAccountId: String, onExportReady: (String) -> Unit) {
         viewModelScope.launch {
-            val json = documentRepository.exportDataAsJson(profileId)
+            val json = dataExportManager.exportDataToJsonString(parentAccountId)
             onExportReady(json)
             _uiState.value = _uiState.value.copy(exportStatusMessage = "Data exported successfully!")
         }
     }
 
+    fun setPhotoBackupSettings(backupToCloud: Boolean, wifiOnly: Boolean) {
+        viewModelScope.launch {
+            preferencesRepository.setPhotoBackupSettings(backupToCloud, wifiOnly)
+        }
+    }
+
     fun deleteAllDataAndAccount(onComplete: () -> Unit) {
         viewModelScope.launch {
+            val userSettings = preferencesRepository.userSettingsFlow.first()
+            val parentId = userSettings.parentAccountId ?: "offline"
+            syncManager.deleteRemoteAccountData(parentId)
             profileRepository.deleteAllProfiles()
             preferencesRepository.clearAllPreferences()
+            try {
+                FirebaseAuth.getInstance().signOut()
+            } catch (_: Exception) {}
             onComplete()
         }
     }

@@ -14,9 +14,18 @@ interface ReaderSettingsDao {
     @Query("SELECT * FROM reader_settings WHERE childProfileId = :profileId AND isDeleted = 0 LIMIT 1")
     fun getSettingsForProfile(profileId: String): Flow<ReaderSettingsEntity?>
 
+    @Query("SELECT * FROM reader_settings WHERE childProfileId = :profileId LIMIT 1")
+    suspend fun getSettingsForProfileDirect(profileId: String): ReaderSettingsEntity?
+
+    @Query("SELECT * FROM reader_settings")
+    suspend fun getAllSettings(): List<ReaderSettingsEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun saveSettings(settings: ReaderSettingsEntity)
 
     @Update
     suspend fun updateSettings(settings: ReaderSettingsEntity)
+
+    @Query("DELETE FROM reader_settings WHERE childProfileId = :profileId")
+    suspend fun deleteSettingsForProfile(profileId: String)
 }

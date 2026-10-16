@@ -69,6 +69,10 @@ class DocumentRepositoryImpl @Inject constructor(
         documentDao.deleteDocumentById(documentId)
     }
 
+    override suspend fun deleteAllForProfile(profileId: String) {
+        documentDao.deleteAllForProfile(profileId)
+    }
+
     override suspend fun exportDataAsJson(profileId: String): String {
         val docs = documentDao.getDocumentsForProfile(profileId).first()
         val builder = StringBuilder("[\n")

@@ -7,7 +7,11 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.akshar.dyslexiareader.data.local.entity.DocumentEntity
+import com.akshar.dyslexiareader.data.ocr.CompositeOcrEngine
+import com.akshar.dyslexiareader.data.ocr.LanguageModelInfo
+import com.akshar.dyslexiareader.data.ocr.TesseractLanguageManager
 import com.akshar.dyslexiareader.data.repository.UserPreferencesRepository
+import com.akshar.dyslexiareader.domain.model.SupportedScript
 import com.akshar.dyslexiareader.domain.ocr.OcrEngine
 import com.akshar.dyslexiareader.domain.repository.DocumentRepository
 import com.akshar.dyslexiareader.domain.util.TextCleanupUtil
@@ -40,7 +44,12 @@ data class CameraUiState(
     val ocrErrorMessage: String? = null,
     val scannedDocumentId: String? = null,
     val scannedPages: List<ScannedPage> = emptyList(),
-    val currentPageIndex: Int = 1
+    val currentPageIndex: Int = 1,
+    val selectedScript: SupportedScript? = null,
+    val languageToDownload: LanguageModelInfo? = null,
+    val isDownloadingLanguage: Boolean = false,
+    val downloadProgress: Float = 0f,
+    val downloadErrorMessage: String? = null
 )
 
 @HiltViewModel
@@ -48,7 +57,8 @@ class CameraViewModel @Inject constructor(
     @ApplicationContext private val context: Context,
     private val documentRepository: DocumentRepository,
     private val preferencesRepository: UserPreferencesRepository,
-    private val ocrEngine: OcrEngine
+    private val ocrEngine: OcrEngine,
+    private val languageManager: TesseractLanguageManager
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(CameraUiState())
@@ -107,18 +117,76 @@ class CameraViewModel @Inject constructor(
         _uiState.value = _uiState.value.copy(normalizedCropRect = rect)
     }
 
+    fun selectScript(script: SupportedScript?) {
+        _uiState.value = _uiState.value.copy(selectedScript = script)
+        if (script == SupportedScript.GUJARATI && !languageManager.isLanguageDownloaded("guj")) {
+            _uiState.value = _uiState.value.copy(languageToDownload = languageManager.getLanguageInfo("guj"))
+        } else if (script == SupportedScript.BENGALI && !languageManager.isLanguageDownloaded("ben")) {
+            _uiState.value = _uiState.value.copy(languageToDownload = languageManager.getLanguageInfo("ben"))
+        }
+    }
+
+    fun dismissLanguageDownloadDialog() {
+        _uiState.value = _uiState.value.copy(
+            languageToDownload = null,
+            isDownloadingLanguage = false,
+            downloadProgress = 0f,
+            downloadErrorMessage = null
+        )
+    }
+
+    fun downloadRequiredLanguage(code: String) {
+        viewModelScope.launch {
+            _uiState.value = _uiState.value.copy(
+                isDownloadingLanguage = true,
+                downloadProgress = 0.05f,
+                downloadErrorMessage = null
+            )
+            val result = languageManager.downloadLanguage(code) { progress ->
+                _uiState.value = _uiState.value.copy(downloadProgress = progress)
+            }
+            if (result.isSuccess) {
+                _uiState.value = _uiState.value.copy(
+                    isDownloadingLanguage = false,
+                    languageToDownload = null,
+                    downloadProgress = 1f
+                )
+            } else {
+                _uiState.value = _uiState.value.copy(
+                    isDownloadingLanguage = false,
+                    downloadErrorMessage = "Download failed. Please check internet connection."
+                )
+            }
+        }
+    }
+
     /**
      * Runs OCR on the current page and saves the complete document (single or multi-page).
      */
     fun runOcrAndFinish(onSuccess: (String) -> Unit) {
         val bitmap = _uiState.value.processedBitmap ?: return
         val cropRect = _uiState.value.normalizedCropRect
+        val preferredScript = _uiState.value.selectedScript
 
         viewModelScope.launch {
+            // Check if language needs to be downloaded before running OCR
+            if (preferredScript == SupportedScript.GUJARATI && !languageManager.isLanguageDownloaded("guj")) {
+                _uiState.value = _uiState.value.copy(languageToDownload = languageManager.getLanguageInfo("guj"))
+                return@launch
+            }
+            if (preferredScript == SupportedScript.BENGALI && !languageManager.isLanguageDownloaded("ben")) {
+                _uiState.value = _uiState.value.copy(languageToDownload = languageManager.getLanguageInfo("ben"))
+                return@launch
+            }
+
             _uiState.value = _uiState.value.copy(isOcrProcessing = true, ocrErrorMessage = null)
             try {
                 val cropped = BitmapUtil.cropBitmap(bitmap, cropRect)
-                val ocrResult = ocrEngine.recognizeText(cropped)
+                val ocrResult = if (ocrEngine is CompositeOcrEngine) {
+                    ocrEngine.recognizeText(cropped, preferredScript)
+                } else {
+                    ocrEngine.recognizeText(cropped)
+                }
 
                 if (ocrResult.text.isBlank() && _uiState.value.scannedPages.isEmpty()) {
                     _uiState.value = _uiState.value.copy(
@@ -188,12 +256,17 @@ class CameraViewModel @Inject constructor(
     fun addCurrentPageAndScanAnother(onNavigateToCamera: () -> Unit) {
         val bitmap = _uiState.value.processedBitmap ?: return
         val cropRect = _uiState.value.normalizedCropRect
+        val preferredScript = _uiState.value.selectedScript
 
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isOcrProcessing = true, ocrErrorMessage = null)
             try {
                 val cropped = BitmapUtil.cropBitmap(bitmap, cropRect)
-                val ocrResult = ocrEngine.recognizeText(cropped)
+                val ocrResult = if (ocrEngine is CompositeOcrEngine) {
+                    ocrEngine.recognizeText(cropped, preferredScript)
+                } else {
+                    ocrEngine.recognizeText(cropped)
+                }
 
                 val page = ScannedPage(
                     pageNumber = _uiState.value.scannedPages.size + 1,

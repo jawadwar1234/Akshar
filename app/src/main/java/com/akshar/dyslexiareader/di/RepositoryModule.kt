@@ -2,9 +2,11 @@ package com.akshar.dyslexiareader.di
 
 import com.akshar.dyslexiareader.data.repository.ChildProfileRepositoryImpl
 import com.akshar.dyslexiareader.data.repository.DocumentRepositoryImpl
+import com.akshar.dyslexiareader.data.repository.StatsRepositoryImpl
 import com.akshar.dyslexiareader.data.repository.WordMasteryRepositoryImpl
 import com.akshar.dyslexiareader.domain.repository.ChildProfileRepository
 import com.akshar.dyslexiareader.domain.repository.DocumentRepository
+import com.akshar.dyslexiareader.domain.repository.StatsRepository
 import com.akshar.dyslexiareader.domain.repository.WordMasteryRepository
 import dagger.Binds
 import dagger.Module
@@ -33,4 +35,10 @@ abstract class RepositoryModule {
     abstract fun bindWordMasteryRepository(
         impl: WordMasteryRepositoryImpl
     ): WordMasteryRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindStatsRepository(
+        impl: StatsRepositoryImpl
+    ): StatsRepository
 }

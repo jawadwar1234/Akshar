@@ -25,14 +25,7 @@ object DatabaseModule {
     fun provideAppDatabase(
         @ApplicationContext context: Context
     ): AppDatabase {
-        return Room.databaseBuilder(
-            context,
-            AppDatabase::class.java,
-            AppDatabase.DATABASE_NAME
-        )
-        .addMigrations(AppDatabase.MIGRATION_1_2)
-        .fallbackToDestructiveMigration()
-        .build()
+        return AppDatabase.getInstance(context)
     }
 
     @Provides
@@ -63,5 +56,10 @@ object DatabaseModule {
     @Provides
     fun provideReadingSessionDao(database: AppDatabase): ReadingSessionDao {
         return database.readingSessionDao()
+    }
+
+    @Provides
+    fun provideTeacherNoteDao(database: AppDatabase): com.akshar.dyslexiareader.data.local.dao.TeacherNoteDao {
+        return database.teacherNoteDao()
     }
 }

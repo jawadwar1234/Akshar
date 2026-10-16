@@ -128,17 +128,19 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.androidx.hilt.navigation.compose)
 
-    // Firebase (Auth + Firestore Offline)
+    // Firebase (Auth + Firestore Offline + Storage)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.auth.ktx)
     implementation(libs.firebase.firestore.ktx)
+    implementation(libs.firebase.storage.ktx)
     implementation(libs.play.services.auth)
 
     // Coroutines & Futures
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.kotlinx.coroutines.play.services)
     implementation(libs.guava)
-    implementation(libs.androidx.concurrent.futures.ktx)
+    // WorkManager (Background Sync Worker)
+    implementation(libs.androidx.work.runtime.ktx)
 
     // Unit Testing
     testImplementation(libs.junit)
@@ -146,6 +148,7 @@ dependencies {
     testImplementation(libs.turbine)
     testImplementation(libs.truth)
     testImplementation(libs.kotlinx.coroutines.test)
+    testImplementation("org.json:json:20240303")
 
     // Android Testing
     androidTestImplementation(libs.androidx.test.ext.junit)

@@ -11,10 +11,15 @@ import com.akshar.dyslexiareader.domain.model.WordSpan
 import com.akshar.dyslexiareader.domain.repository.DocumentRepository
 import com.akshar.dyslexiareader.domain.repository.WordMasteryRepository
 import com.akshar.dyslexiareader.domain.util.UnicodeIndicTextUtil
+import com.akshar.dyslexiareader.util.voice.VoiceCommand
+import com.akshar.dyslexiareader.util.voice.VoiceCommandManager
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -40,7 +45,8 @@ class ReaderViewModel @Inject constructor(
     private val documentRepository: DocumentRepository,
     private val wordMasteryRepository: WordMasteryRepository,
     private val preferencesRepository: UserPreferencesRepository,
-    val ttsManager: TextToSpeechManager
+    val ttsManager: TextToSpeechManager,
+    val voiceCommandManager: VoiceCommandManager
 ) : ViewModel() {
 
     val userSettings: StateFlow<UserSettings> = preferencesRepository.userSettingsFlow
@@ -48,8 +54,45 @@ class ReaderViewModel @Inject constructor(
 
     val ttsState: StateFlow<TtsPlaybackState> = ttsManager.playbackState
 
+    private val _navigationEvent = MutableSharedFlow<String>(extraBufferCapacity = 1)
+    val navigationEvent: SharedFlow<String> = _navigationEvent.asSharedFlow()
+
     private val _uiState = MutableStateFlow(ReaderUiState())
     val uiState: StateFlow<ReaderUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            voiceCommandManager.commandEvents.collect { command ->
+                handleVoiceCommand(command)
+            }
+        }
+    }
+
+    private fun handleVoiceCommand(command: VoiceCommand) {
+        when (command) {
+            VoiceCommand.NEXT_LINE -> nextSentence()
+            VoiceCommand.PREVIOUS_LINE -> prevSentence()
+            VoiceCommand.READ -> playTts()
+            VoiceCommand.STOP -> pauseTts()
+            VoiceCommand.BIGGER_TEXT -> {
+                val currentSize = userSettings.value.fontSize
+                updateFontSize((currentSize + 2f).coerceAtMost(36f))
+            }
+            VoiceCommand.SMALLER_TEXT -> {
+                val currentSize = userSettings.value.fontSize
+                updateFontSize((currentSize - 2f).coerceAtLeast(16f))
+            }
+            VoiceCommand.SCAN_PAGE -> {
+                stopTts()
+                _navigationEvent.tryEmit("scan")
+            }
+            VoiceCommand.OPEN_LIBRARY -> {
+                stopTts()
+                _navigationEvent.tryEmit("library")
+            }
+            VoiceCommand.UNKNOWN -> {}
+        }
+    }
 
     fun loadDocument(documentId: String) {
         viewModelScope.launch {

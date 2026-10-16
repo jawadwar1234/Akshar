@@ -93,6 +93,27 @@ class AuthViewModel @Inject constructor(
         }
     }
 
+    fun completeFirstRunPersonalization(
+        theme: String,
+        fontSize: Float,
+        lineSpacing: Float,
+        letterSpacing: Float,
+        fontFamily: String,
+        rulerEnabled: Boolean
+    ) {
+        viewModelScope.launch {
+            preferencesRepository.updateReaderPreferences(
+                theme = theme,
+                fontSize = fontSize,
+                lineSpacing = lineSpacing,
+                letterSpacing = letterSpacing,
+                fontFamily = fontFamily,
+                rulerEnabled = rulerEnabled
+            )
+            preferencesRepository.setFirstRunCompleted(true)
+        }
+    }
+
     fun setLanguage(language: AppLanguage) {
         viewModelScope.launch {
             preferencesRepository.setAppLanguage(language)

@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -15,15 +16,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.CloudDone
+import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.OfflinePin
+import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material.icons.filled.Security
 import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.Wifi
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -39,6 +46,8 @@ import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Switch
+import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -58,6 +67,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.akshar.dyslexiareader.R
+import com.akshar.dyslexiareader.data.local.entity.ChildProfileEntity
+import com.akshar.dyslexiareader.data.sync.SyncStatus
 import com.akshar.dyslexiareader.ui.auth.AuthViewModel
 import com.akshar.dyslexiareader.ui.profiles.ProfilesViewModel
 import com.akshar.dyslexiareader.ui.theme.CalmTeal
@@ -85,9 +96,12 @@ fun PrivacyDataScreen(
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
     val userSettings by authViewModel.userSettings.collectAsState()
+    val syncStatus by profilesViewModel.syncStatus.collectAsState()
+    val allProfiles by profilesViewModel.allProfiles.collectAsState()
     val scrollState = rememberScrollState()
 
     var showDeleteAccountDialog by remember { mutableStateOf(false) }
+    var profileToDelete by remember { mutableStateOf<ChildProfileEntity?>(null) }
     var showLanguageDialog by remember { mutableStateOf(false) }
 
     Scaffold(
@@ -125,6 +139,152 @@ fun PrivacyDataScreen(
             horizontalAlignment = Alignment.Start
         ) {
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
+
+            // Quiet Sync Status Badge
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(DesignTokens.ElevationAndBorders.borderThin, PaperCreamBorder, MaterialTheme.shapes.medium),
+                shape = MaterialTheme.shapes.medium,
+                colors = CardDefaults.cardColors(containerColor = PaperCreamSurface)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(DesignTokens.Spacing.md),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val (icon, statusText, tintColor) = when (syncStatus) {
+                        SyncStatus.SAVED_TO_CLOUD -> Triple(
+                            Icons.Default.CloudDone,
+                            "Saved to your account",
+                            CalmTeal
+                        )
+                        SyncStatus.SYNCING -> Triple(
+                            Icons.Default.CloudSync,
+                            "Syncing in background...",
+                            TerracottaAccent
+                        )
+                        SyncStatus.OFFLINE_PAUSED -> Triple(
+                            Icons.Default.OfflinePin,
+                            "Saved on this phone (Offline)",
+                            CharcoalTextSecondary
+                        )
+                        else -> Triple(
+                            Icons.Default.PhoneAndroid,
+                            "Saved on this phone",
+                            CalmTeal
+                        )
+                    }
+
+                    Icon(icon, contentDescription = null, tint = tintColor, modifier = Modifier.size(24.dp))
+                    Spacer(modifier = Modifier.width(DesignTokens.Spacing.md))
+                    Column {
+                        Text(
+                            text = statusText,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = CharcoalTextPrimary
+                        )
+                        Text(
+                            text = if (userSettings.isOfflineMode) "Working locally without internet" else "Account: ${userSettings.parentAccountId ?: "Local user"}",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CharcoalTextSecondary
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.lg))
+
+            // Cloud Photo Backup (Opt-In with Warning)
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .border(DesignTokens.ElevationAndBorders.borderThin, PaperCreamBorder, MaterialTheme.shapes.medium),
+                shape = MaterialTheme.shapes.medium,
+                colors = CardDefaults.cardColors(containerColor = PaperCreamSurface)
+            ) {
+                Column(modifier = Modifier.padding(DesignTokens.Spacing.md)) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Icon(Icons.Default.PhotoLibrary, contentDescription = null, tint = TerracottaAccent)
+                            Spacer(modifier = Modifier.width(DesignTokens.Spacing.md))
+                            Column {
+                                Text(
+                                    text = "Back up page photos",
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = CharcoalTextPrimary
+                                )
+                                Text(
+                                    text = "Keep original textbook images in cloud storage",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CharcoalTextSecondary
+                                )
+                            }
+                        }
+                        Switch(
+                            checked = userSettings.backupPhotosToCloud,
+                            onCheckedChange = { isChecked ->
+                                profilesViewModel.setPhotoBackupSettings(
+                                    backupToCloud = isChecked,
+                                    wifiOnly = userSettings.backupPhotosWifiOnly
+                                )
+                            },
+                            colors = SwitchDefaults.colors(
+                                checkedThumbColor = Color.White,
+                                checkedTrackColor = TerracottaAccent
+                            )
+                        )
+                    }
+
+                    if (userSettings.backupPhotosToCloud) {
+                        Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Default.Wifi, contentDescription = null, tint = CalmTeal)
+                                Spacer(modifier = Modifier.width(DesignTokens.Spacing.sm))
+                                Text(
+                                    text = "Upload over Wi-Fi only",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = CharcoalTextPrimary
+                                )
+                            }
+                            Switch(
+                                checked = userSettings.backupPhotosWifiOnly,
+                                onCheckedChange = { wifiOnly ->
+                                    profilesViewModel.setPhotoBackupSettings(
+                                        backupToCloud = true,
+                                        wifiOnly = wifiOnly
+                                    )
+                                },
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = Color.White,
+                                    checkedTrackColor = CalmTeal
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(DesignTokens.Spacing.sm))
+                        Text(
+                            text = "⚠️ Notice: Photos will use cloud storage. Scanned reading text and progress are always lightweight and synced securely.",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = CharcoalTextSecondary
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(DesignTokens.Spacing.lg))
 
             // App Language Card
             Card(
@@ -173,6 +333,58 @@ fun PrivacyDataScreen(
 
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.lg))
 
+            // Student Profiles Management
+            if (allProfiles.isNotEmpty()) {
+                Text(
+                    text = "Manage Profiles",
+                    style = MaterialTheme.typography.headlineMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = CharcoalTextPrimary
+                )
+                Spacer(modifier = Modifier.height(DesignTokens.Spacing.sm))
+
+                allProfiles.forEach { profile ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = DesignTokens.Spacing.xs)
+                            .border(DesignTokens.ElevationAndBorders.borderThin, PaperCreamBorder, MaterialTheme.shapes.medium),
+                        shape = MaterialTheme.shapes.medium,
+                        colors = CardDefaults.cardColors(containerColor = PaperCreamSurface)
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(DesignTokens.Spacing.md),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Text(
+                                    text = profile.displayName,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = CharcoalTextPrimary
+                                )
+                                Text(
+                                    text = "${profile.gradeLevel} • ${profile.pinType} PIN",
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = CharcoalTextSecondary
+                                )
+                            }
+                            IconButton(onClick = { profileToDelete = profile }) {
+                                Icon(
+                                    imageVector = Icons.Default.Delete,
+                                    contentDescription = "Delete Profile",
+                                    tint = GentleErrorMuted
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(modifier = Modifier.height(DesignTokens.Spacing.lg))
+            }
+
             // DPDP Act 2023 & Data Rights Section
             Text(
                 text = stringResource(R.string.settings_section_privacy),
@@ -182,19 +394,19 @@ fun PrivacyDataScreen(
             )
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.sm))
 
-            // Export Data Button
+            // Export Data Button (JSON)
             Button(
                 onClick = {
-                    val activeId = userSettings.activeProfileId ?: "default"
-                    profilesViewModel.exportData(activeId) { jsonContent ->
+                    val parentId = userSettings.parentAccountId ?: "local_parent"
+                    profilesViewModel.exportData(parentId) { jsonContent ->
                         val shareIntent = Intent(Intent.ACTION_SEND).apply {
-                            type = "text/plain"
-                            putExtra(Intent.EXTRA_SUBJECT, "Akshar Textbook Data Export")
+                            type = "application/json"
+                            putExtra(Intent.EXTRA_SUBJECT, "Akshar Data Export (JSON)")
                             putExtra(Intent.EXTRA_TEXT, jsonContent)
                         }
-                        context.startActivity(Intent.createChooser(shareIntent, "Export My Reading Data"))
+                        context.startActivity(Intent.createChooser(shareIntent, "Export My Reading Data (JSON)"))
                         scope.launch {
-                            snackbarHostState.showSnackbar("Data exported successfully!")
+                            snackbarHostState.showSnackbar("Data exported as JSON!")
                         }
                     }
                 },
@@ -215,7 +427,7 @@ fun PrivacyDataScreen(
 
             Spacer(modifier = Modifier.height(DesignTokens.Spacing.md))
 
-            // Delete Account and Erase All Data
+            // Delete Account and Erase All Data (Local + Cloud)
             Button(
                 onClick = { showDeleteAccountDialog = true },
                 modifier = Modifier
@@ -248,7 +460,7 @@ fun PrivacyDataScreen(
             ) {
                 Column(modifier = Modifier.padding(DesignTokens.Spacing.md)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.OfflinePin, contentDescription = null, tint = CalmTeal)
+                        Icon(Icons.Default.Security, contentDescription = null, tint = CalmTeal)
                         Spacer(modifier = Modifier.width(DesignTokens.Spacing.sm))
                         Text(
                             text = stringResource(R.string.settings_about),
@@ -317,7 +529,35 @@ fun PrivacyDataScreen(
         )
     }
 
-    // Delete Confirmation Dialog
+    // Delete Single Profile Dialog
+    profileToDelete?.let { profile ->
+        AlertDialog(
+            onDismissRequest = { profileToDelete = null },
+            icon = { Icon(Icons.Default.Warning, contentDescription = null, tint = GentleErrorMuted) },
+            title = { Text("Delete ${profile.displayName}'s Profile?", color = CharcoalTextPrimary) },
+            text = { Text("This will permanently delete this student's profile, saved readings, and practice history from this device and the cloud.", color = CharcoalTextSecondary) },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        profilesViewModel.deleteProfile(profile.id)
+                        profileToDelete = null
+                        scope.launch { snackbarHostState.showSnackbar("Profile deleted") }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = GentleErrorMuted)
+                ) {
+                    Text(stringResource(R.string.action_delete), color = Color.White)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(onClick = { profileToDelete = null }) {
+                    Text(stringResource(R.string.action_cancel))
+                }
+            },
+            containerColor = PaperCreamBackground
+        )
+    }
+
+    // Delete Account Confirmation Dialog
     if (showDeleteAccountDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteAccountDialog = false },

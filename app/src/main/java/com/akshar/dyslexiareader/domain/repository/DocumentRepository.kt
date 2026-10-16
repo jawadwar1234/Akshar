@@ -18,6 +18,7 @@ interface DocumentRepository {
     suspend fun softDeleteDocument(documentId: String)
     suspend fun restoreDocument(documentId: String)
     suspend fun deleteDocument(documentId: String)
+    suspend fun deleteAllForProfile(profileId: String)
     suspend fun exportDataAsJson(profileId: String): String
     suspend fun exportDataAsText(profileId: String): String
 }

@@ -18,6 +18,12 @@ interface ChildProfileDao {
     @Query("SELECT * FROM child_profiles ORDER BY createdAt ASC")
     fun getAllProfiles(): Flow<List<ChildProfileEntity>>
 
+    @Query("SELECT * FROM child_profiles ORDER BY createdAt ASC")
+    suspend fun getAllProfilesDirect(): List<ChildProfileEntity>
+
+    @Query("SELECT * FROM child_profiles WHERE parentAccountId = :parentId ORDER BY createdAt ASC")
+    suspend fun getProfilesForParentDirect(parentId: String): List<ChildProfileEntity>
+
     @Query("SELECT * FROM child_profiles WHERE id = :profileId LIMIT 1")
     suspend fun getProfileById(profileId: String): ChildProfileEntity?
 

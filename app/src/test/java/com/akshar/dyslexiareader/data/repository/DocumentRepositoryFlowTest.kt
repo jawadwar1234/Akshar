@@ -100,6 +100,18 @@ class FakeDocumentDao : DocumentDao {
         }
     }
 
+    override suspend fun getDocumentsForProfileDirect(profileId: String): List<DocumentEntity> {
+        return documents.values.filter { it.childProfileId == profileId }
+    }
+
+    override suspend fun getAllDocumentsDirect(): List<DocumentEntity> {
+        return documents.values.toList()
+    }
+
+    override suspend fun getDocumentByIdDirect(documentId: String): DocumentEntity? {
+        return documents[documentId]
+    }
+
     override suspend fun deleteDocument(document: DocumentEntity) {
         documents.remove(document.id)
     }
@@ -109,7 +121,7 @@ class FakeDocumentDao : DocumentDao {
     }
 
     override suspend fun deleteAllForProfile(profileId: String) {
-        documents.values.removeAll { it.childProfileId == profileId }
+        documents.values.filter { it.childProfileId == profileId }.forEach { documents.remove(it.id) }
     }
 
     override suspend fun clearAllDocuments() {

@@ -13,6 +13,18 @@ interface ReadingSessionDao {
     @Query("SELECT * FROM reading_sessions WHERE childProfileId = :profileId AND isDeleted = 0 ORDER BY createdAt DESC")
     fun getSessionsForProfile(profileId: String): Flow<List<ReadingSessionEntity>>
 
+    @Query("SELECT * FROM reading_sessions WHERE childProfileId = :profileId ORDER BY createdAt DESC")
+    suspend fun getSessionsForProfileDirect(profileId: String): List<ReadingSessionEntity>
+
+    @Query("SELECT * FROM reading_sessions")
+    suspend fun getAllSessions(): List<ReadingSessionEntity>
+
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun recordSession(session: ReadingSessionEntity)
+
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
+    suspend fun insertSessions(sessions: List<ReadingSessionEntity>)
+
+    @Query("DELETE FROM reading_sessions WHERE childProfileId = :profileId")
+    suspend fun deleteSessionsForProfile(profileId: String)
 }

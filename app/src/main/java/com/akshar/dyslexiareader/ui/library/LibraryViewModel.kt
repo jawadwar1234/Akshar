@@ -4,7 +4,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.akshar.dyslexiareader.data.local.entity.DocumentEntity
 import com.akshar.dyslexiareader.data.repository.UserPreferencesRepository
+import com.akshar.dyslexiareader.data.sync.SyncManager
 import com.akshar.dyslexiareader.domain.repository.DocumentRepository
+import com.akshar.dyslexiareader.domain.util.UnicodeIndicTextUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -12,9 +14,11 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.util.UUID
 import javax.inject.Inject
 
 enum class LibraryTab {
@@ -32,6 +36,7 @@ data class LibraryUiState(
     val documentToRename: DocumentEntity? = null,
     val documentToEditTags: DocumentEntity? = null,
     val documentToDelete: DocumentEntity? = null,
+    val isClearAllHistoryDialogOpen: Boolean = false,
     val recentlyDeletedDocumentId: String? = null,
     val snackbarMessage: String? = null
 )
@@ -40,11 +45,64 @@ data class LibraryUiState(
 @HiltViewModel
 class LibraryViewModel @Inject constructor(
     private val documentRepository: DocumentRepository,
-    private val preferencesRepository: UserPreferencesRepository
+    private val preferencesRepository: UserPreferencesRepository,
+    private val syncManager: SyncManager
 ) : ViewModel() {
+
+    val syncStatus = syncManager.syncStatus
 
     private val _uiState = MutableStateFlow(LibraryUiState())
     val uiState: StateFlow<LibraryUiState> = _uiState.asStateFlow()
+
+    private val seededProfileIds = mutableSetOf<String>()
+
+    init {
+        viewModelScope.launch {
+            preferencesRepository.userSettingsFlow.collect { settings ->
+                val profileId = settings.activeProfileId
+                if (!profileId.isNullOrBlank() && !seededProfileIds.contains(profileId)) {
+                    seededProfileIds.add(profileId)
+                    val existing = documentRepository.getDocumentsForProfile(profileId).first()
+                    if (existing.isEmpty()) {
+                        seedSampleLessons(profileId)
+                    }
+                }
+            }
+        }
+    }
+
+    private suspend fun seedSampleLessons(profileId: String) {
+        val engText = "The solar system consists of the Sun and eight planets orbiting around it. Earth is our home planet where living things grow and thrive. The moon shines brightly in the quiet night sky."
+        val parsedEng = UnicodeIndicTextUtil.parseReaderText(engText)
+        val engDoc = DocumentEntity(
+            id = UUID.randomUUID().toString(),
+            childProfileId = profileId,
+            title = "The Solar System and Earth",
+            rawOcrText = engText,
+            cleanText = parsedEng.fullText,
+            detectedScript = "LATIN",
+            subject = "Science",
+            tags = "Science, Space",
+            wordCount = parsedEng.allWords.size
+        )
+
+        val hindiText = "एक छोटा तारा रात के सुंदर आकाश में चमकता था। उसने देखा कि सुबह होते ही सूरज अपनी सुनहरी किरणें फैलाता है। चिड़ियाँ चहकने लगती हैं और फूल खिलते हैं।"
+        val parsedHindi = UnicodeIndicTextUtil.parseReaderText(hindiText)
+        val hindiDoc = DocumentEntity(
+            id = UUID.randomUUID().toString(),
+            childProfileId = profileId,
+            title = "नन्हा तारा और सूरज",
+            rawOcrText = hindiText,
+            cleanText = parsedHindi.fullText,
+            detectedScript = "DEVANAGARI",
+            subject = "Hindi",
+            tags = "Hindi, Story",
+            wordCount = parsedHindi.allWords.size
+        )
+
+        documentRepository.saveDocument(engDoc)
+        documentRepository.saveDocument(hindiDoc)
+    }
 
     val activeProfileId: StateFlow<String?> = preferencesRepository.userSettingsFlow
         .combine(_uiState) { settings, _ -> settings.activeProfileId }
@@ -170,6 +228,26 @@ class LibraryViewModel @Inject constructor(
             _uiState.value = _uiState.value.copy(
                 recentlyDeletedDocumentId = null,
                 snackbarMessage = "Restored lesson"
+            )
+        }
+    }
+
+    fun openClearAllHistoryDialog() {
+        _uiState.value = _uiState.value.copy(isClearAllHistoryDialogOpen = true)
+    }
+
+    fun dismissClearAllHistoryDialog() {
+        _uiState.value = _uiState.value.copy(isClearAllHistoryDialogOpen = false)
+    }
+
+    fun confirmClearAllHistory() {
+        viewModelScope.launch {
+            val userSettings = preferencesRepository.userSettingsFlow.first()
+            val profileId = userSettings.activeProfileId ?: "default"
+            documentRepository.deleteAllForProfile(profileId)
+            _uiState.value = _uiState.value.copy(
+                isClearAllHistoryDialogOpen = false,
+                snackbarMessage = "Reading history cleared"
             )
         }
     }

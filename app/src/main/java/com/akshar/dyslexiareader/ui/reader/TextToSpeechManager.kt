@@ -45,7 +45,6 @@ class TextToSpeechManager @Inject constructor(
     private var sentenceList: List<String> = emptyList()
     private var sentenceCharOffsets: List<Int> = emptyList()
     private var currentScript: SupportedScript = SupportedScript.LATIN
-    private var isSlowSyllableSpeaking = false
 
     init {
         tts = TextToSpeech(context, this)
@@ -62,40 +61,61 @@ class TextToSpeechManager @Inject constructor(
     private fun setupUtteranceListener() {
         tts?.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
             override fun onStart(utteranceId: String?) {
-                _playbackState.value = _playbackState.value.copy(isPlaying = true, isPaused = false)
+                if (utteranceId?.startsWith("utterance_") == true) {
+                    _playbackState.value = _playbackState.value.copy(isPlaying = true, isPaused = false)
+                }
             }
 
             override fun onDone(utteranceId: String?) {
-                if (isSlowSyllableSpeaking) {
-                    isSlowSyllableSpeaking = false
+                if (utteranceId?.startsWith("slow_word_") == true ||
+                    utteranceId?.startsWith("single_word_") == true ||
+                    utteranceId?.startsWith("syllable_") == true
+                ) {
+                    mainHandler.post {
+                        tts?.setSpeechRate(_playbackState.value.speechRate)
+                    }
                     return
                 }
-                val nextIndex = _playbackState.value.currentSentenceIndex + 1
-                if (nextIndex < sentenceList.size) {
-                    _playbackState.value = _playbackState.value.copy(
-                        currentSentenceIndex = nextIndex,
-                        currentWordCharStart = if (nextIndex < sentenceCharOffsets.size) sentenceCharOffsets[nextIndex] else -1,
-                        currentWordCharLength = 0
-                    )
-                    speakSentence(nextIndex)
-                } else {
-                    stop()
+
+                if (utteranceId?.startsWith("utterance_") == true) {
+                    val nextIndex = _playbackState.value.currentSentenceIndex + 1
+                    if (nextIndex < sentenceList.size) {
+                        _playbackState.value = _playbackState.value.copy(
+                            currentSentenceIndex = nextIndex,
+                            currentWordCharStart = if (nextIndex < sentenceCharOffsets.size) sentenceCharOffsets[nextIndex] else -1,
+                            currentWordCharLength = 0
+                        )
+                        speakSentence(nextIndex)
+                    } else {
+                        stop()
+                    }
                 }
             }
 
             override fun onError(utteranceId: String?) {
+                if (utteranceId?.startsWith("slow_word_") == true ||
+                    utteranceId?.startsWith("single_word_") == true ||
+                    utteranceId?.startsWith("syllable_") == true
+                ) {
+                    mainHandler.post {
+                        tts?.setSpeechRate(_playbackState.value.speechRate)
+                    }
+                    return
+                }
                 _playbackState.value = _playbackState.value.copy(isPlaying = false, isPaused = false)
             }
 
             override fun onRangeStart(utteranceId: String?, start: Int, end: Int, frame: Int) {
                 super.onRangeStart(utteranceId, start, end, frame)
-                val sentenceIdx = _playbackState.value.currentSentenceIndex
-                val offset = if (sentenceIdx < sentenceCharOffsets.size) sentenceCharOffsets[sentenceIdx] else 0
-                _playbackState.value = _playbackState.value.copy(
-                    isRangeStartSupported = true,
-                    currentWordCharStart = offset + start,
-                    currentWordCharLength = end - start
-                )
+                if (utteranceId?.startsWith("utterance_") == true) {
+                    val sentenceIdx = _playbackState.value.currentSentenceIndex
+                    val offset = if (sentenceIdx < sentenceCharOffsets.size) sentenceCharOffsets[sentenceIdx] else 0
+                    _playbackState.value = _playbackState.value.copy(
+                        isRangeStartSupported = true,
+                        currentWordCharStart = offset + start,
+                        currentWordCharLength = end - start
+                    )
+                }
             }
         })
     }
@@ -136,11 +156,13 @@ class TextToSpeechManager @Inject constructor(
     }
 
     fun pause() {
+        mainHandler.removeCallbacksAndMessages(null)
         tts?.stop()
         _playbackState.value = _playbackState.value.copy(isPlaying = false, isPaused = true)
     }
 
     fun stop() {
+        mainHandler.removeCallbacksAndMessages(null)
         tts?.stop()
         _playbackState.value = _playbackState.value.copy(
             isPlaying = false,
@@ -179,35 +201,22 @@ class TextToSpeechManager @Inject constructor(
      * Tap to hear word at normal reading rate.
      */
     fun speakWord(word: String, script: SupportedScript = currentScript) {
+        if (word.isBlank()) return
+        mainHandler.removeCallbacksAndMessages(null)
         checkAndApplyLanguage(script.primaryLocale)
         tts?.setSpeechRate(_playbackState.value.speechRate)
         tts?.speak(word, TextToSpeech.QUEUE_FLUSH, null, "single_word_${System.currentTimeMillis()}")
     }
 
     /**
-     * Long-press to hear word slowly, syllable by syllable.
+     * Long-press or button tap to hear word spoken slowly and completely.
      */
     fun speakWordSlowlySyllables(word: String, script: SupportedScript = currentScript) {
+        if (word.isBlank()) return
+        mainHandler.removeCallbacksAndMessages(null)
         checkAndApplyLanguage(script.primaryLocale)
-        val syllables = PhonicsSyllableUtil.breakIntoSyllables(word, script.primaryLocale)
-        if (syllables.isEmpty()) return
-
-        isSlowSyllableSpeaking = true
-        tts?.stop()
-        tts?.setSpeechRate(0.6f) // Slower pace for sounding out phonics
-
-        syllables.forEachIndexed { index, syllable ->
-            mainHandler.postDelayed({
-                val queueMode = if (index == 0) TextToSpeech.QUEUE_FLUSH else TextToSpeech.QUEUE_ADD
-                tts?.speak(syllable, queueMode, null, "syllable_${index}_${System.currentTimeMillis()}")
-                // Return speech rate back after final syllable
-                if (index == syllables.size - 1) {
-                    mainHandler.postDelayed({
-                        tts?.setSpeechRate(_playbackState.value.speechRate)
-                    }, 500)
-                }
-            }, (index * 600L))
-        }
+        tts?.setSpeechRate(0.6f) // Slower pace for sounding out phonics without cutoffs
+        tts?.speak(word, TextToSpeech.QUEUE_FLUSH, null, "slow_word_${System.currentTimeMillis()}")
     }
 
     fun setSpeechRate(rate: Float) {
@@ -267,6 +276,7 @@ class TextToSpeechManager @Inject constructor(
     }
 
     fun shutdown() {
+        mainHandler.removeCallbacksAndMessages(null)
         tts?.stop()
         tts?.shutdown()
     }

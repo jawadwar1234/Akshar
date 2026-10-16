@@ -15,8 +15,17 @@ interface WordMasteryDao {
     @Query("SELECT * FROM word_mastery WHERE childProfileId = :profileId AND isMastered = 1 ORDER BY lastPracticedAt DESC")
     fun getMasteredWords(profileId: String): Flow<List<WordMasteryEntity>>
 
+    @Query("SELECT * FROM word_mastery WHERE childProfileId = :profileId AND isMastered = 1 ORDER BY lastPracticedAt DESC")
+    suspend fun getMasteredWordsDirect(profileId: String): List<WordMasteryEntity>
+
     @Query("SELECT * FROM word_mastery WHERE childProfileId = :profileId ORDER BY lastPracticedAt DESC")
     fun getAllWordsForProfile(profileId: String): Flow<List<WordMasteryEntity>>
+
+    @Query("SELECT * FROM word_mastery WHERE childProfileId = :profileId ORDER BY lastPracticedAt DESC")
+    suspend fun getAllWordsForProfileDirect(profileId: String): List<WordMasteryEntity>
+
+    @Query("SELECT * FROM word_mastery")
+    suspend fun getAllWordsDirect(): List<WordMasteryEntity>
 
     @Query("SELECT * FROM word_mastery WHERE childProfileId = :profileId AND cleanWord = :cleanWord LIMIT 1")
     suspend fun getWord(profileId: String, cleanWord: String): WordMasteryEntity?
@@ -41,6 +50,9 @@ interface WordMasteryDao {
 
     @Query("DELETE FROM word_mastery WHERE childProfileId = :profileId")
     suspend fun deleteAllForProfile(profileId: String)
+
+    @Query("DELETE FROM word_mastery WHERE childProfileId = :profileId")
+    suspend fun deleteWordsForProfile(profileId: String)
 
     @Query("DELETE FROM word_mastery")
     suspend fun clearAllWords()

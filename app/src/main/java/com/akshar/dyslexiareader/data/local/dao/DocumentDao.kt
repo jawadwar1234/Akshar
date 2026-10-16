@@ -21,8 +21,17 @@ interface DocumentDao {
     @Query("SELECT * FROM documents WHERE childProfileId = :profileId AND subject = :subject AND isDeleted = 0 ORDER BY updatedAt DESC")
     fun getDocumentsBySubject(profileId: String, subject: String): Flow<List<DocumentEntity>>
 
+    @Query("SELECT * FROM documents WHERE childProfileId = :profileId ORDER BY updatedAt DESC")
+    suspend fun getDocumentsForProfileDirect(profileId: String): List<DocumentEntity>
+
+    @Query("SELECT * FROM documents ORDER BY updatedAt DESC")
+    suspend fun getAllDocumentsDirect(): List<DocumentEntity>
+
     @Query("SELECT * FROM documents WHERE id = :documentId AND isDeleted = 0 LIMIT 1")
     suspend fun getDocumentById(documentId: String): DocumentEntity?
+
+    @Query("SELECT * FROM documents WHERE id = :documentId LIMIT 1")
+    suspend fun getDocumentByIdDirect(documentId: String): DocumentEntity?
 
     @Query("SELECT * FROM documents WHERE id = :documentId LIMIT 1")
     fun observeDocumentById(documentId: String): Flow<DocumentEntity?>
